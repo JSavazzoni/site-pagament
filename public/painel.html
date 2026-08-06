@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel Geral — Folha de Pagamento</title>
+  <title>Painel Geral &mdash; Folha de Pagamento</title>
   <meta name="application-name" content="Folha de Pagamento">
+  <meta name="theme-color" content="#08080a">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a0a0b'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
@@ -15,137 +16,234 @@
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/painel.html">
-      <span class="brand-mark">R$→$</span>
+      <span class="brand-mark">R$&rarr;$</span>
       <div>
-        <h1>Painel Geral</h1>
-        <p class="brand-sub" id="brand-sub">—</p>
+        <h1>Folha de Pagamento</h1>
+        <p class="brand-sub" id="brand-sub">Painel geral</p>
       </div>
     </a>
+
     <nav class="topbar-nav">
       <a href="/painel.html" class="active">Painel</a>
-      <a href="/admin.html">Administração</a>
+      <a href="/admin.html">Gest&atilde;o</a>
     </nav>
+
+    <div class="topbar-spacer"></div>
+
     <div class="topbar-user">
-      <button class="btn btn-ghost btn-sm" id="btn-senha" type="button">Trocar senha</button>
-      <div class="user-chip">
-        <span class="name" id="user-name">—</span>
-        <span class="role" id="user-role">CCO</span>
+      <div class="menu">
+        <button class="user-btn" type="button" data-menu-trigger aria-haspopup="true">
+          <span class="avatar" id="avatar">&mdash;</span>
+          <span class="user-btn-text">
+            <span class="name" id="user-name">&mdash;</span>
+            <span class="role" id="user-role">CCO</span>
+          </span>
+          <span class="caret">&#9660;</span>
+        </button>
+        <div class="menu-panel" role="menu">
+          <button class="menu-item" id="mi-senha" type="button" role="menuitem">
+            <span class="mi-ico">&#128273;</span> Trocar minha senha
+          </button>
+          <a class="menu-item" href="/admin.html" role="menuitem">
+            <span class="mi-ico">&#9881;</span> Setores e usu&aacute;rios
+          </a>
+          <div class="menu-sep"></div>
+          <button class="menu-item danger" id="mi-sair" type="button" role="menuitem">
+            <span class="mi-ico">&#8594;]</span> Sair
+          </button>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">Sair</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
 
-  <section class="panel" aria-label="Competencia, cotacao e parametros do mes">
-    <div class="panel-grid">
+  <div class="toolbar">
+    <div class="toolbar-inner">
 
-      <div class="field">
-        <label for="competencia">Competência</label>
-        <input type="month" id="competencia" class="input">
-        <small class="hint" id="hint-competencia">Cada mês guarda sua própria folha.</small>
-      </div>
-
-      <div class="field">
-        <label for="taxa-conversao">Taxa de conversão (R$ por US$ 1)</label>
-        <div class="field-row">
-          <input type="text" id="taxa-conversao" class="input input-num" inputmode="decimal">
-          <button class="btn btn-ghost btn-sm" id="btn-usar-cotacao" type="button">Usar cotação</button>
-        </div>
-        <label class="check">
-          <input type="checkbox" id="auto-cotacao">
-          <span>Sincronizar com a cotação ao vivo</span>
+      <div class="month-nav" id="month-nav">
+        <button type="button" data-mes-prev aria-label="M&ecirc;s anterior">&#8249;</button>
+        <label class="month-label">
+          <span>&mdash;</span>
+          <input type="month" id="competencia" aria-label="Compet&ecirc;ncia">
         </label>
+        <button type="button" data-mes-next aria-label="Pr&oacute;ximo m&ecirc;s">&#8250;</button>
+      </div>
+      <button class="btn btn-sm btn-hoje" id="btn-hoje" type="button" hidden>M&ecirc;s atual</button>
+
+      <div class="quote-chip" id="quote-chip" title="Cota&ccedil;&atilde;o de mercado ao vivo">
+        <span class="dot"></span>
+        <span>US$ 1 =</span>
+        <span class="val" id="cotacao-usd">&mdash;</span>
+        <span class="ago" id="cotacao-time">buscando</span>
+        <button type="button" id="btn-refresh" aria-label="Atualizar cota&ccedil;&atilde;o"><span class="ico-refresh">&#8635;</span></button>
       </div>
 
-      <div class="field">
-        <label for="dias-uteis">Dias úteis no mês</label>
-        <input type="number" id="dias-uteis" class="input input-num" min="1" max="31" step="1">
+      <div class="toolbar-spacer"></div>
+
+      <div class="search">
+        <span class="ico">&#9906;</span>
+        <input id="busca" type="search" placeholder="Buscar colaborador, cargo, cidade..." autocomplete="off">
+        <button class="clear" id="busca-clear" type="button" aria-label="Limpar busca">&times;</button>
       </div>
 
-      <div class="field">
-        <label for="taxa-wise">Taxa Wise (%)</label>
-        <input type="text" id="taxa-wise" class="input input-num" inputmode="decimal">
+      <div class="seg" role="group" aria-label="Modo de exibi&ccedil;&atilde;o">
+        <button class="seg-btn active" type="button" data-modo="pagamento">Pagamento</button>
+        <button class="seg-btn" type="button" data-modo="completo">Completo</button>
       </div>
 
-      <div class="field">
-        <label>Cotação de mercado agora</label>
-        <div class="field-row">
-          <span class="badge badge-accent" id="cotacao-usd" style="font-size:13px;padding:8px 12px;">US$ 1 = R$ —</span>
-          <button class="btn btn-ghost btn-sm" id="btn-refresh" type="button" title="Atualizar cotação">
-            <span class="ico-refresh" aria-hidden="true">↻</span>
+      <div class="menu">
+        <button class="btn btn-sm" type="button" data-menu-trigger aria-haspopup="true" aria-label="Mais a&ccedil;&otilde;es">
+          &#8943;
+        </button>
+        <div class="menu-panel" role="menu">
+          <div class="menu-label">Exportar</div>
+          <button class="menu-item" id="mi-export-wise" type="button" role="menuitem">
+            <span class="mi-ico">&#128184;</span>
+            <span><strong>Lista de pagamento Wise</strong><span class="mi-sub">Valores em d&oacute;lar, prontos para o lote</span></span>
+          </button>
+          <button class="menu-item" id="mi-export-csv" type="button" role="menuitem">
+            <span class="mi-ico">&#128202;</span>
+            <span><strong>Planilha completa (CSV)</strong><span class="mi-sub">Todos os setores desta compet&ecirc;ncia</span></span>
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-print" type="button" role="menuitem">
+            <span class="mi-ico">&#128424;</span>
+            <span><strong>Imprimir / salvar PDF</strong><span class="mi-sub">Ctrl + P</span></span>
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-expandir" type="button" role="menuitem">
+            <span class="mi-ico">&#9776;</span> Expandir / recolher todos
           </button>
         </div>
-        <small class="hint" id="cotacao-time">Buscando cotação…</small>
       </div>
 
     </div>
-  </section>
+  </div>
 
   <section class="kpis" aria-label="Resumo geral">
+    <div class="kpi kpi-blue">
+      <span class="kpi-label">Total da folha</span>
+      <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-custo-diario">Custo di&aacute;rio: R$ 0,00</span>
+    </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">A enviar em d&oacute;lar</span>
+      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
+      <span class="kpi-foot" id="kpi-total-usd-taxas">c/ taxa Wise: $0.00</span>
+    </div>
+    <div class="kpi kpi-amber">
+      <span class="kpi-label">Custo na cota&ccedil;&atilde;o de hoje</span>
+      <strong class="kpi-value" id="kpi-custo-real">&mdash;</strong>
+      <span class="kpi-foot" id="kpi-diferenca">&mdash;</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Pagamentos</span>
+      <strong class="kpi-value" id="kpi-pago">0 de 0</strong>
+      <span class="kpi-foot" id="kpi-pago-valor">R$ 0,00 enviados</span>
+      <span class="progress"><i id="kpi-progress" style="width:0%"></i></span>
+    </div>
     <div class="kpi">
       <span class="kpi-label">Colaboradores</span>
       <strong class="kpi-value" id="kpi-qtd">0</strong>
       <span class="kpi-foot" id="kpi-setores">0 setores</span>
     </div>
-    <div class="kpi kpi-blue">
-      <span class="kpi-label">Total geral (R$)</span>
-      <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
-      <span class="kpi-foot" id="kpi-custo-diario">Custo diário: R$ 0,00</span>
-    </div>
-    <div class="kpi kpi-accent">
-      <span class="kpi-label">Total em dólar</span>
-      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
-      <span class="kpi-foot" id="kpi-total-usd-taxas">c/ taxas: $0.00</span>
-    </div>
-    <div class="kpi kpi-amber">
-      <span class="kpi-label">Custo real na cotação de hoje</span>
-      <strong class="kpi-value" id="kpi-custo-real">R$ 0,00</strong>
-      <span class="kpi-foot" id="kpi-diferenca">—</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi-label">Pagamentos feitos</span>
-      <strong class="kpi-value" id="kpi-pago">0 de 0</strong>
-      <span class="kpi-foot" id="kpi-pago-valor">R$ 0,00</span>
-    </div>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Folha por setor</h2>
-      <div class="card-actions">
-        <button class="btn" id="btn-export-csv" type="button">Exportar CSV (todos)</button>
-        <button class="btn" id="btn-export-wise" type="button">Lista de pagamento Wise</button>
-        <button class="btn" id="btn-print" type="button">Imprimir / PDF</button>
+  <section class="collapse" id="params">
+    <div class="collapse-head" id="params-head" role="button" tabindex="0" aria-expanded="false">
+      <span class="collapse-caret">&#9654;</span>
+      <h2>Par&acirc;metros do m&ecirc;s</h2>
+      <div class="collapse-summary chips">
+        <span class="chip"><span class="k">Taxa</span><span class="v" id="sum-taxa">&mdash;</span></span>
+        <span class="chip"><span class="k">Dias &uacute;teis</span><span class="v" id="sum-dias">&mdash;</span></span>
+        <span class="chip"><span class="k">Wise</span><span class="v" id="sum-wise">&mdash;</span></span>
       </div>
     </div>
-    <div id="setores-container"></div>
-    <p class="empty" id="empty-geral" hidden>Nenhum setor com colaboradores nesta competência ainda.</p>
+
+    <div class="collapse-body">
+      <div class="panel-grid">
+        <div class="field">
+          <label for="taxa-conversao">Taxa de convers&atilde;o</label>
+          <div class="input-affix">
+            <span class="affix">R$</span>
+            <input type="text" id="taxa-conversao" inputmode="decimal" aria-label="Reais por d&oacute;lar">
+            <span class="affix right">/ US$ 1</span>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="auto-cotacao">
+            <span>Seguir a cota&ccedil;&atilde;o ao vivo automaticamente</span>
+          </label>
+          <button class="btn btn-sm" id="btn-usar-cotacao" type="button" style="align-self:flex-start;">Usar a cota&ccedil;&atilde;o de agora</button>
+        </div>
+
+        <div class="field">
+          <label for="dias-uteis">Dias &uacute;teis no m&ecirc;s</label>
+          <div class="input-affix">
+            <input type="number" id="dias-uteis" min="1" max="31" step="1">
+            <span class="affix right">dias</span>
+          </div>
+          <small class="hint">Base do c&aacute;lculo de custo di&aacute;rio.</small>
+        </div>
+
+        <div class="field">
+          <label for="taxa-wise">Taxa Wise</label>
+          <div class="input-affix">
+            <input type="text" id="taxa-wise" inputmode="decimal">
+            <span class="affix right">%</span>
+          </div>
+          <small class="hint">Somada ao valor em d&oacute;lar de cada colaborador.</small>
+        </div>
+      </div>
+    </div>
   </section>
 
+  <section id="setores-container" aria-label="Folha por setor"></section>
+
+  <div class="card empty" id="empty-geral" hidden>
+    <span class="empty-ico">&#128203;</span>
+    <strong>Nenhum lan&ccedil;amento nesta compet&ecirc;ncia</strong>
+    <p>Os gestores ainda n&atilde;o cadastraram colaboradores para este m&ecirc;s.</p>
+    <button class="btn" id="btn-ir-admin" type="button">Gerenciar setores e gestores</button>
+  </div>
+
+  <div class="card empty" id="empty-busca" hidden>
+    <span class="empty-ico">&#9906;</span>
+    <strong>Nada encontrado</strong>
+    <p>Nenhum colaborador corresponde &agrave; sua busca nesta compet&ecirc;ncia.</p>
+  </div>
+
   <footer class="foot">
-    <p>Marque um lançamento como <strong>pago</strong> depois de enviar o Wise. Itens pagos ficam travados para os gestores.</p>
+    <p>Marque como <strong>pago</strong> depois de enviar pelo Wise &mdash; itens pagos ficam travados para os gestores.</p>
+    <p><kbd>Alt</kbd> + <kbd>&larr;</kbd> <kbd>&rarr;</kbd> troca de m&ecirc;s &middot; <kbd>/</kbd> busca &middot; <kbd>Ctrl</kbd>+<kbd>P</kbd> imprime</p>
   </footer>
 
 </main>
 
 <div class="modal-backdrop" id="modal-senha">
-  <div class="modal">
-    <h3>Trocar senha</h3>
-    <p class="hint">Sua senha atual e a nova senha, com pelo menos 8 caracteres.</p>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-senha">
+    <div class="modal-icon">&#128273;</div>
+    <h3 id="t-senha">Trocar senha</h3>
+    <p class="hint">Informe a senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
     <form class="modal-form" id="form-senha">
       <div class="field">
         <label for="senha-atual">Senha atual</label>
-        <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+        <div class="pw-wrap">
+          <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+        </div>
       </div>
       <div class="field">
         <label for="senha-nova">Nova senha</label>
-        <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+        <div class="pw-wrap">
+          <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+        </div>
       </div>
       <p class="error-text" id="senha-error" role="alert"></p>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" id="btn-senha-cancelar">Cancelar</button>
+        <button class="btn" type="button" id="btn-senha-cancelar">Cancelar</button>
         <button class="btn btn-primary" type="submit">Salvar</button>
       </div>
     </form>

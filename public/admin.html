@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administração — Folha de Pagamento</title>
+  <title>Gest&atilde;o &mdash; Folha de Pagamento</title>
   <meta name="application-name" content="Folha de Pagamento">
+  <meta name="theme-color" content="#08080a">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a0a0b'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
@@ -15,136 +16,228 @@
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/painel.html">
-      <span class="brand-mark">R$→$</span>
+      <span class="brand-mark">R$&rarr;$</span>
       <div>
-        <h1>Administração</h1>
+        <h1>Folha de Pagamento</h1>
         <p class="brand-sub">Setores e contas de acesso</p>
       </div>
     </a>
+
     <nav class="topbar-nav">
       <a href="/painel.html">Painel</a>
-      <a href="/admin.html" class="active">Administração</a>
+      <a href="/admin.html" class="active">Gest&atilde;o</a>
     </nav>
+
+    <div class="topbar-spacer"></div>
+
     <div class="topbar-user">
-      <div class="user-chip">
-        <span class="name" id="user-name">—</span>
-        <span class="role">CCO</span>
+      <div class="menu">
+        <button class="user-btn" type="button" data-menu-trigger aria-haspopup="true">
+          <span class="avatar" id="avatar">&mdash;</span>
+          <span class="user-btn-text">
+            <span class="name" id="user-name">&mdash;</span>
+            <span class="role" id="user-role">CCO</span>
+          </span>
+          <span class="caret">&#9660;</span>
+        </button>
+        <div class="menu-panel" role="menu">
+          <button class="menu-item" id="mi-senha" type="button" role="menuitem">
+            <span class="mi-ico">&#128273;</span> Trocar minha senha
+          </button>
+          <a class="menu-item" href="/painel.html" role="menuitem">
+            <span class="mi-ico">&#128202;</span> Voltar ao painel
+          </a>
+          <div class="menu-sep"></div>
+          <button class="menu-item danger" id="mi-sair" type="button" role="menuitem">
+            <span class="mi-ico">&#8594;]</span> Sair
+          </button>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">Sair</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Setores</h2>
-      <div class="card-actions">
-        <button class="btn btn-primary" id="btn-novo-setor" type="button">+ Setor</button>
-      </div>
-    </div>
+  <div class="admin-grid">
 
-    <form class="form-inline" id="form-setor" hidden>
-      <div class="field">
-        <label for="setor-nome">Nome do setor</label>
-        <input class="input" id="setor-nome" placeholder="Ex.: Vendas" required>
+    <section class="card">
+      <div class="card-head">
+        <h2>Setores <span class="badge badge-neutral" id="cont-setores">0</span></h2>
+        <div class="card-actions">
+          <button class="btn btn-primary btn-sm" id="btn-novo-setor" type="button">+ Setor</button>
+        </div>
       </div>
-      <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Criar</button>
-        <button class="btn btn-ghost" type="button" id="btn-cancelar-setor">Cancelar</button>
+      <div id="lista-setores"></div>
+      <div class="empty" id="empty-setores" hidden>
+        <span class="empty-ico">&#127970;</span>
+        <strong>Nenhum setor ainda</strong>
+        <p>Crie o primeiro setor para depois vincular um gestor a ele.</p>
+        <button class="btn btn-primary" id="btn-primeiro-setor" type="button">+ Criar setor</button>
       </div>
-    </form>
+    </section>
 
-    <div class="table-scroll">
-      <table class="grid grid-compact" id="tabela-setores">
-        <thead>
-          <tr>
-            <th class="col-nome">Nome</th>
-            <th>Status</th>
-            <th class="num">Gestores ativos</th>
-            <th>Criado em</th>
-            <th class="col-acao"><span class="sr-only">Ações</span></th>
-          </tr>
-        </thead>
-        <tbody id="tbody-setores"></tbody>
-      </table>
-    </div>
-    <p class="empty" id="empty-setores" hidden>Nenhum setor cadastrado ainda.</p>
-  </section>
+    <section class="card">
+      <div class="card-head">
+        <h2>Contas de acesso <span class="badge badge-neutral" id="cont-usuarios">0</span></h2>
+        <div class="card-actions">
+          <button class="btn btn-primary btn-sm" id="btn-novo-usuario" type="button">+ Usu&aacute;rio</button>
+        </div>
+      </div>
+      <div id="lista-usuarios"></div>
+      <div class="empty" id="empty-usuarios" hidden>
+        <span class="empty-ico">&#128100;</span>
+        <strong>Nenhuma conta cadastrada</strong>
+        <p>Crie contas de gestor para que cada setor lance a pr&oacute;pria folha.</p>
+      </div>
+    </section>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Usuários</h2>
-      <div class="card-actions">
-        <button class="btn btn-primary" id="btn-novo-usuario" type="button">+ Usuário</button>
-      </div>
-    </div>
+  </div>
 
-    <form class="form-inline" id="form-usuario" hidden>
-      <div class="field">
-        <label for="usuario-nome">Nome</label>
-        <input class="input" id="usuario-nome" required>
-      </div>
-      <div class="field">
-        <label for="usuario-username">Usuário (login)</label>
-        <input class="input" id="usuario-username" placeholder="ex.: ana.silva" required>
-      </div>
-      <div class="field">
-        <label for="usuario-senha">Senha</label>
-        <input class="input" id="usuario-senha" type="password" minlength="8" required>
-      </div>
-      <div class="field">
-        <label for="usuario-papel">Papel</label>
-        <select class="input" id="usuario-papel">
-          <option value="gestor">Gestor</option>
-          <option value="cco">CCO</option>
-        </select>
-      </div>
-      <div class="field" id="campo-setor-usuario">
-        <label for="usuario-setor">Setor</label>
-        <select class="input" id="usuario-setor"></select>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Criar</button>
-        <button class="btn btn-ghost" type="button" id="btn-cancelar-usuario">Cancelar</button>
-      </div>
-    </form>
-    <p class="error-text" id="usuario-error" style="padding: 0 18px;"></p>
-
-    <div class="table-scroll">
-      <table class="grid grid-compact" id="tabela-usuarios">
-        <thead>
-          <tr>
-            <th class="col-nome">Nome</th>
-            <th>Usuário</th>
-            <th>Papel</th>
-            <th>Setor</th>
-            <th>Status</th>
-            <th class="col-acao"><span class="sr-only">Ações</span></th>
-          </tr>
-        </thead>
-        <tbody id="tbody-usuarios"></tbody>
-      </table>
-    </div>
-    <p class="empty" id="empty-usuarios" hidden>Nenhum usuário cadastrado ainda.</p>
-  </section>
+  <footer class="foot">
+    <p>Setores e contas nunca s&atilde;o apagados &mdash; s&oacute; desativados, para preservar o hist&oacute;rico dos meses anteriores.</p>
+  </footer>
 
 </main>
 
+<!-- novo setor -->
+<div class="modal-backdrop" id="modal-setor">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-setor">
+    <div class="modal-icon">&#127970;</div>
+    <h3 id="t-setor">Novo setor</h3>
+    <p class="hint">O gestor desse setor s&oacute; enxerga a folha dele.</p>
+    <form class="modal-form" id="form-setor">
+      <div class="field">
+        <label for="setor-nome">Nome do setor</label>
+        <input class="input" id="setor-nome" placeholder="Ex.: Vendas" required maxlength="60">
+      </div>
+      <p class="error-text" id="setor-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn" type="button" data-fechar="modal-setor">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Criar setor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- novo usuario -->
+<div class="modal-backdrop" id="modal-usuario">
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="t-usuario">
+    <div class="modal-icon">&#128100;</div>
+    <h3 id="t-usuario">Nova conta de acesso</h3>
+    <p class="hint">O usu&aacute;rio de login e a senha s&atilde;o criados agora e entregues &agrave; pessoa.</p>
+    <form class="modal-form" id="form-usuario">
+      <div class="modal-grid">
+        <div class="field">
+          <label for="usuario-nome">Nome completo</label>
+          <input class="input" id="usuario-nome" placeholder="Ana Silva" required autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="usuario-username">Usu&aacute;rio de login</label>
+          <input class="input" id="usuario-username" placeholder="ana.silva" required
+                 autocapitalize="none" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="usuario-papel">Papel</label>
+          <select class="input" id="usuario-papel">
+            <option value="gestor">Gestor de setor</option>
+            <option value="cco">CCO (v&ecirc; tudo)</option>
+          </select>
+        </div>
+        <div class="field" id="campo-setor-usuario">
+          <label for="usuario-setor">Setor</label>
+          <select class="input" id="usuario-setor"></select>
+        </div>
+        <div class="field full">
+          <label for="usuario-senha">Senha inicial</label>
+          <div class="field-row">
+            <div class="pw-wrap" style="flex:1;">
+              <input class="input" id="usuario-senha" type="text" minlength="8" required autocomplete="new-password">
+              <button class="pw-toggle" type="button" data-pw-toggle="usuario-senha" aria-label="Ocultar senha" tabindex="-1">&#128065;</button>
+            </div>
+            <button class="btn btn-sm" type="button" id="btn-gerar-senha" title="Gerar senha forte">&#127922; Gerar</button>
+          </div>
+          <small class="hint">M&iacute;nimo de 8 caracteres. A pessoa pode trocar depois em &quot;Trocar minha senha&quot;.</small>
+        </div>
+      </div>
+      <p class="error-text" id="usuario-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn" type="button" data-fechar="modal-usuario">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Criar conta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- credenciais criadas -->
+<div class="modal-backdrop" id="modal-credenciais">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-cred">
+    <div class="modal-icon">&#9989;</div>
+    <h3 id="t-cred">Conta criada</h3>
+    <p class="hint">Copie e envie estes dados para a pessoa. A senha n&atilde;o aparece de novo.</p>
+    <div class="modal-form">
+      <div class="secret-box">
+        <code id="cred-texto">&mdash;</code>
+        <button class="btn btn-sm" type="button" id="btn-copiar-cred">Copiar</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="button" data-fechar="modal-credenciais">Pronto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- redefinir senha -->
 <div class="modal-backdrop" id="modal-reset">
-  <div class="modal">
-    <h3>Redefinir senha</h3>
-    <p class="hint" id="reset-usuario-label">—</p>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-reset">
+    <div class="modal-icon">&#128273;</div>
+    <h3 id="t-reset">Redefinir senha</h3>
+    <p class="hint" id="reset-usuario-label">&mdash;</p>
     <form class="modal-form" id="form-reset">
       <div class="field">
         <label for="reset-senha">Nova senha</label>
-        <input class="input" id="reset-senha" type="password" minlength="8" required autocomplete="new-password">
+        <div class="field-row">
+          <div class="pw-wrap" style="flex:1;">
+            <input class="input" id="reset-senha" type="text" minlength="8" required autocomplete="new-password">
+            <button class="pw-toggle" type="button" data-pw-toggle="reset-senha" aria-label="Ocultar senha" tabindex="-1">&#128065;</button>
+          </div>
+          <button class="btn btn-sm" type="button" id="btn-gerar-reset" title="Gerar senha forte">&#127922; Gerar</button>
+        </div>
       </div>
-      <p class="error-text" id="reset-error"></p>
+      <p class="error-text" id="reset-error" role="alert"></p>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" id="btn-reset-cancelar">Cancelar</button>
+        <button class="btn" type="button" data-fechar="modal-reset">Cancelar</button>
         <button class="btn btn-primary" type="submit">Redefinir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- trocar a propria senha -->
+<div class="modal-backdrop" id="modal-senha">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-senha">
+    <div class="modal-icon">&#128273;</div>
+    <h3 id="t-senha">Trocar senha</h3>
+    <p class="hint">Informe a senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
+    <form class="modal-form" id="form-senha">
+      <div class="field">
+        <label for="senha-atual">Senha atual</label>
+        <div class="pw-wrap">
+          <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="senha-nova">Nova senha</label>
+        <div class="pw-wrap">
+          <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+        </div>
+      </div>
+      <p class="error-text" id="senha-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn" type="button" id="btn-senha-cancelar">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Salvar</button>
       </div>
     </form>
   </div>

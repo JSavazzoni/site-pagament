@@ -1,21 +1,23 @@
 'use strict';
 (function () {
-  var state = { sectors: [], users: [], resetTargetId: null };
+  var esc = App.esc;
+  var state = { sectors: [], users: [], resetTargetId: null, eu: null };
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function fmtData(iso) {
     if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('pt-BR');
+    return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
   }
+
+  /* ============================================================
+     Inicializacao
+     ============================================================ */
 
   function init() {
     App.get('/api/auth/me').then(function (data) {
       if (data.user.role !== 'cco') { location.replace('/setor.html'); return; }
-      App.$('#user-name').textContent = data.user.name;
+      state.eu = data.user;
+      App.montarUserMenu(data.user);
+      App.ligarPwToggles();
       bindEventos();
       carregarTudo();
     }).catch(function () { location.replace('/login.html'); });
@@ -31,162 +33,241 @@
     }).catch(function (e) { App.toast(e.message, 'err'); });
   }
 
-  /* ---------------- setores ---------------- */
+  /* ============================================================
+     Setores
+     ============================================================ */
 
   function renderSetores() {
-    var tb = App.$('#tbody-setores');
+    var box = App.$('#lista-setores');
+    App.$('#cont-setores').textContent = state.sectors.length;
     App.$('#empty-setores').hidden = state.sectors.length > 0;
-    tb.innerHTML = state.sectors.map(function (s) {
-      return '<tr data-id="' + s.id + '">' +
-        '<td><input class="cell nome" data-f-setor="name" value="' + esc(s.name) + '"></td>' +
-        '<td>' + (s.active ? '<span class="badge badge-accent">Ativo</span>' : '<span class="badge badge-neutral">Inativo</span>') + '</td>' +
-        '<td class="num">' + s.gestorCount + '</td>' +
-        '<td>' + fmtData(s.createdAt) + '</td>' +
-        '<td class="acao"><button class="btn btn-sm ' + (s.active ? 'btn-danger' : '') + '" data-toggle-setor type="button">' + (s.active ? 'Desativar' : 'Ativar') + '</button></td>' +
-        '</tr>';
+
+    box.innerHTML = state.sectors.map(function (s) {
+      return '<div class="list-row' + (s.active ? '' : ' is-off') + '" data-id="' + s.id + '">' +
+        '<div class="list-main">' +
+          '<div class="list-title">' +
+            '<input class="name-edit" data-nome-setor value="' + esc(s.name) + '" aria-label="Nome do setor" maxlength="60">' +
+            (s.active ? '' : '<span class="badge badge-neutral">inativo</span>') +
+          '</div>' +
+          '<div class="list-sub">' +
+            '<span>' + s.gestorCount + ' gestor' + (s.gestorCount === 1 ? '' : 'es') + ' ativo' + (s.gestorCount === 1 ? '' : 's') + '</span>' +
+            '<span>&middot;</span>' +
+            '<span>criado em ' + fmtData(s.createdAt) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="list-actions">' +
+          '<button class="btn btn-sm" data-toggle-setor type="button">' +
+            (s.active ? 'Desativar' : 'Ativar') + '</button>' +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
   function bindSetores() {
-    var tb = App.$('#tbody-setores');
+    var box = App.$('#lista-setores');
 
-    tb.addEventListener('focusout', function (e) {
-      var inp = e.target.closest('[data-f-setor="name"]');
+    box.addEventListener('focusout', function (e) {
+      var inp = e.target.closest('[data-nome-setor]');
       if (!inp) return;
-      var id = Number(inp.closest('tr').dataset.id);
+      var id = Number(inp.closest('.list-row').dataset.id);
+      var atual = state.sectors.filter(function (s) { return s.id === id; })[0];
       var nome = inp.value.trim();
-      var atual = state.sectors.find(function (s) { return s.id === id; });
-      if (!nome || (atual && nome === atual.name)) { if (atual) inp.value = atual.name; return; }
-      App.patch('/api/sectors/' + id, { name: nome }).then(function (updated) {
-        var idx = state.sectors.findIndex(function (s) { return s.id === id; });
-        state.sectors[idx] = updated;
-        App.toast('Setor renomeado.', 'ok');
+      if (!nome || !atual || nome === atual.name) { if (atual) inp.value = atual.name; return; }
+
+      App.patch('/api/sectors/' + id, { name: nome }).then(function (upd) {
+        var i = state.sectors.findIndex(function (s) { return s.id === id; });
+        state.sectors[i] = upd;
         preencherSelectSetor();
+        renderUsuarios();
+        App.toast('Setor renomeado.', 'ok');
       }).catch(function (e2) {
         App.toast(e2.message, 'err');
-        if (atual) inp.value = atual.name;
+        inp.value = atual.name;
       });
     });
 
-    tb.addEventListener('click', function (e) {
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.closest('[data-nome-setor]')) { e.preventDefault(); e.target.blur(); }
+      if (e.key === 'Escape' && e.target.closest('[data-nome-setor]')) {
+        var id = Number(e.target.closest('.list-row').dataset.id);
+        var s = state.sectors.filter(function (x) { return x.id === id; })[0];
+        if (s) e.target.value = s.name;
+        e.target.blur();
+      }
+    });
+
+    box.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-toggle-setor]');
       if (!btn) return;
-      var id = Number(btn.closest('tr').dataset.id);
-      var s = state.sectors.find(function (x) { return x.id === id; });
+      var id = Number(btn.closest('.list-row').dataset.id);
+      var s = state.sectors.filter(function (x) { return x.id === id; })[0];
       if (!s) return;
       var novo = !s.active;
-      if (novo === false && !confirm('Desativar o setor "' + s.name + '"? Gestores desse setor nao poderao mais editar a folha.')) return;
-      App.patch('/api/sectors/' + id, { active: novo }).then(function (updated) {
-        var idx = state.sectors.findIndex(function (x) { return x.id === id; });
-        state.sectors[idx] = updated;
-        renderSetores();
-        preencherSelectSetor();
-        App.toast('Setor ' + (novo ? 'ativado' : 'desativado') + '.', 'ok');
-      }).catch(function (e2) { App.toast(e2.message, 'err'); });
+
+      var acao = function () {
+        App.patch('/api/sectors/' + id, { active: novo }).then(function (upd) {
+          var i = state.sectors.findIndex(function (x) { return x.id === id; });
+          state.sectors[i] = upd;
+          renderSetores();
+          preencherSelectSetor();
+          App.toast('Setor ' + (novo ? 'ativado' : 'desativado') + '.', 'ok');
+        }).catch(function (e2) { App.toast(e2.message, 'err'); });
+      };
+
+      if (novo) { acao(); return; }
+      App.confirmar({
+        titulo: 'Desativar "' + s.name + '"?',
+        texto: 'Os gestores deste setor deixam de lan\u00e7ar a folha. O hist\u00f3rico dos meses anteriores continua no painel.',
+        ok: 'Desativar', perigo: true
+      }).then(function (sim) { if (sim) acao(); });
     });
   }
 
   function preencherSelectSetor() {
     var sel = App.$('#usuario-setor');
     var ativos = state.sectors.filter(function (s) { return s.active; });
-    sel.innerHTML = ativos.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('');
+    sel.innerHTML = ativos.length
+      ? ativos.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('')
+      : '<option value="">Crie um setor primeiro</option>';
   }
 
-  /* ---------------- usuarios ---------------- */
+  /* ============================================================
+     Usuarios
+     ============================================================ */
 
   function renderUsuarios() {
-    var tb = App.$('#tbody-usuarios');
+    var box = App.$('#lista-usuarios');
+    App.$('#cont-usuarios').textContent = state.users.length;
     App.$('#empty-usuarios').hidden = state.users.length > 0;
-    tb.innerHTML = state.users.map(function (u) {
-      var papelBadge = u.role === 'cco' ? '<span class="badge badge-blue">CCO</span>' : '<span class="badge badge-neutral">Gestor</span>';
-      var setorCell = u.role === 'gestor' ? setorSelectHtml(u) : '<span class="hint">—</span>';
-      return '<tr data-id="' + u.id + '">' +
-        '<td class="ro-left" style="font-weight:600;padding:9px 10px;">' + esc(u.name) + '</td>' +
-        '<td><code style="font-size:12px;color:var(--ink-2)">' + esc(u.username) + '</code></td>' +
-        '<td>' + papelBadge + '</td>' +
-        '<td>' + setorCell + '</td>' +
-        '<td>' + (u.active ? '<span class="badge badge-accent">Ativo</span>' : '<span class="badge badge-neutral">Inativo</span>') + '</td>' +
-        '<td class="acao" style="white-space:nowrap;">' +
-          '<button class="btn btn-sm btn-ghost" data-reset-senha type="button">Senha</button> ' +
-          '<button class="btn btn-sm ' + (u.active ? 'btn-danger' : '') + '" data-toggle-usuario type="button">' + (u.active ? 'Desativar' : 'Ativar') + '</button>' +
-        '</td>' +
-        '</tr>';
+
+    box.innerHTML = state.users.map(function (u) {
+      var souEu = state.eu && u.id === state.eu.id;
+      return '<div class="list-row' + (u.active ? '' : ' is-off') + '" data-id="' + u.id + '">' +
+        '<span class="avatar' + (u.role === 'cco' ? ' is-cco' : '') + '">' + esc(App.iniciais(u.name)) + '</span>' +
+        '<div class="list-main">' +
+          '<div class="list-title">' + esc(u.name) +
+            (u.role === 'cco' ? ' <span class="badge badge-blue">CCO</span>' : '') +
+            (souEu ? ' <span class="badge badge-neutral">voc&ecirc;</span>' : '') +
+            (u.active ? '' : ' <span class="badge badge-neutral">inativo</span>') +
+          '</div>' +
+          '<div class="list-sub">' +
+            '<code>' + esc(u.username) + '</code>' +
+            (u.role === 'gestor' ? selectSetor(u) : '<span>acesso total a todos os setores</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="list-actions">' +
+          '<button class="btn btn-sm" data-reset type="button" title="Definir nova senha">Senha</button>' +
+          (souEu ? '' :
+            '<button class="btn btn-sm" data-toggle-usuario type="button">' +
+              (u.active ? 'Desativar' : 'Ativar') + '</button>') +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
-  function setorSelectHtml(u) {
+  function selectSetor(u) {
     var opts = state.sectors.map(function (s) {
-      return '<option value="' + s.id + '"' + (s.id === u.sectorId ? ' selected' : '') + (s.active ? '' : ' disabled') + '>' + esc(s.name) + (s.active ? '' : ' (inativo)') + '</option>';
+      return '<option value="' + s.id + '"' + (s.id === u.sectorId ? ' selected' : '') +
+        (s.active ? '' : ' disabled') + '>' + esc(s.name) + (s.active ? '' : ' (inativo)') + '</option>';
     }).join('');
-    return '<select class="input" data-mudar-setor style="padding:5px 8px;font-size:12.5px;">' + opts + '</select>';
+    return '<select class="select-inline" data-mudar-setor aria-label="Setor do gestor">' + opts + '</select>';
   }
 
   function bindUsuarios() {
-    var tb = App.$('#tbody-usuarios');
+    var box = App.$('#lista-usuarios');
 
-    tb.addEventListener('change', function (e) {
+    box.addEventListener('change', function (e) {
       var sel = e.target.closest('[data-mudar-setor]');
       if (!sel) return;
-      var id = Number(sel.closest('tr').dataset.id);
-      App.patch('/api/users/' + id, { sectorId: Number(sel.value) }).then(function (updated) {
-        var idx = state.users.findIndex(function (u) { return u.id === id; });
-        state.users[idx] = updated;
+      var id = Number(sel.closest('.list-row').dataset.id);
+      App.patch('/api/users/' + id, { sectorId: Number(sel.value) }).then(function (upd) {
+        var i = state.users.findIndex(function (u) { return u.id === id; });
+        state.users[i] = upd;
         App.toast('Setor do gestor atualizado.', 'ok');
       }).catch(function (e2) { App.toast(e2.message, 'err'); renderUsuarios(); });
     });
 
-    tb.addEventListener('click', function (e) {
+    box.addEventListener('click', function (e) {
       var toggle = e.target.closest('[data-toggle-usuario]');
       if (toggle) {
-        var id = Number(toggle.closest('tr').dataset.id);
-        var u = state.users.find(function (x) { return x.id === id; });
+        var id = Number(toggle.closest('.list-row').dataset.id);
+        var u = state.users.filter(function (x) { return x.id === id; })[0];
         if (!u) return;
         var novo = !u.active;
-        if (!novo && !confirm('Desativar o acesso de "' + u.name + '"? As sessoes abertas dessa pessoa serao encerradas.')) return;
-        App.patch('/api/users/' + id, { active: novo }).then(function (updated) {
-          var idx = state.users.findIndex(function (x) { return x.id === id; });
-          state.users[idx] = updated;
-          renderUsuarios();
-          App.toast('Usuário ' + (novo ? 'ativado' : 'desativado') + '.', 'ok');
-        }).catch(function (e2) { App.toast(e2.message, 'err'); });
+
+        var acao = function () {
+          App.patch('/api/users/' + id, { active: novo }).then(function (upd) {
+            var i = state.users.findIndex(function (x) { return x.id === id; });
+            state.users[i] = upd;
+            renderUsuarios();
+            App.toast('Acesso ' + (novo ? 'reativado' : 'revogado') + '.', 'ok');
+          }).catch(function (e2) { App.toast(e2.message, 'err'); });
+        };
+
+        if (novo) { acao(); return; }
+        App.confirmar({
+          titulo: 'Revogar o acesso de ' + u.name + '?',
+          texto: 'A pessoa \u00e9 desconectada na hora e n\u00e3o consegue mais entrar. Os lan\u00e7amentos que ela fez continuam na folha.',
+          ok: 'Revogar acesso', perigo: true
+        }).then(function (sim) { if (sim) acao(); });
         return;
       }
 
-      var reset = e.target.closest('[data-reset-senha]');
+      var reset = e.target.closest('[data-reset]');
       if (reset) {
-        var idR = Number(reset.closest('tr').dataset.id);
-        var uR = state.users.find(function (x) { return x.id === idR; });
+        var idR = Number(reset.closest('.list-row').dataset.id);
+        var uR = state.users.filter(function (x) { return x.id === idR; })[0];
         if (!uR) return;
         state.resetTargetId = idR;
-        App.$('#reset-usuario-label').textContent = 'Definir uma nova senha para "' + uR.name + '" (' + uR.username + ').';
+        App.$('#reset-usuario-label').textContent = 'Nova senha para ' + uR.name + ' (' + uR.username + ').';
         App.$('#reset-error').textContent = '';
-        App.$('#reset-senha').value = '';
+        App.$('#reset-senha').value = App.gerarSenha();
         App.openModal('modal-reset');
       }
     });
   }
 
-  /* ---------------- formularios de criacao ---------------- */
+  /* ============================================================
+     Criacao
+     ============================================================ */
+
+  /** Sugere o login a partir do nome, enquanto a CCO ainda nao digitou um. */
+  function sugerirUsername(nome) {
+    return String(nome || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+  }
 
   function bindFormularios() {
-    App.$('#btn-novo-setor').addEventListener('click', function () {
-      App.$('#form-setor').hidden = !App.$('#form-setor').hidden;
-      if (!App.$('#form-setor').hidden) App.$('#setor-nome').focus();
-    });
-    App.$('#btn-cancelar-setor').addEventListener('click', function () {
-      App.$('#form-setor').hidden = true;
+    // ---- setor
+    function abrirSetor() {
       App.$('#form-setor').reset();
-    });
+      App.$('#setor-error').textContent = '';
+      App.openModal('modal-setor');
+    }
+    App.$('#btn-novo-setor').addEventListener('click', abrirSetor);
+    App.$('#btn-primeiro-setor').addEventListener('click', abrirSetor);
+
     App.$('#form-setor').addEventListener('submit', function (e) {
       e.preventDefault();
       var nome = App.$('#setor-nome').value.trim();
       if (!nome) return;
+      App.$('#setor-error').textContent = '';
       App.post('/api/sectors', { name: nome }).then(function () {
-        App.$('#form-setor').reset();
-        App.$('#form-setor').hidden = true;
-        App.toast('Setor criado.', 'ok');
+        App.closeModal('modal-setor');
+        App.toast('Setor "' + nome + '" criado.', 'ok');
         return carregarTudo();
-      }).catch(function (e2) { App.toast(e2.message, 'err'); });
+      }).catch(function (e2) { App.$('#setor-error').textContent = e2.message; });
+    });
+
+    // ---- usuario
+    var campoUser = App.$('#usuario-username');
+    var campoNome = App.$('#usuario-nome');
+    var userEditado = false;
+    campoUser.addEventListener('input', function () { userEditado = true; });
+    campoNome.addEventListener('input', function () {
+      if (!userEditado) campoUser.value = sugerirUsername(campoNome.value);
     });
 
     App.$('#usuario-papel').addEventListener('change', function (e) {
@@ -194,59 +275,91 @@
     });
 
     App.$('#btn-novo-usuario').addEventListener('click', function () {
-      var f = App.$('#form-usuario');
-      f.hidden = !f.hidden;
-      App.$('#campo-setor-usuario').hidden = App.$('#usuario-papel').value !== 'gestor';
-      if (!f.hidden) App.$('#usuario-nome').focus();
-    });
-    App.$('#btn-cancelar-usuario').addEventListener('click', function () {
-      App.$('#form-usuario').hidden = true;
+      if (!state.sectors.filter(function (s) { return s.active; }).length) {
+        App.toast('Crie um setor ativo antes de cadastrar um gestor.', 'err');
+      }
       App.$('#form-usuario').reset();
       App.$('#usuario-error').textContent = '';
+      App.$('#usuario-senha').value = App.gerarSenha();
+      App.$('#campo-setor-usuario').hidden = false;
+      userEditado = false;
+      App.openModal('modal-usuario');
     });
+
+    App.$('#btn-gerar-senha').addEventListener('click', function () {
+      App.$('#usuario-senha').value = App.gerarSenha();
+      App.$('#usuario-senha').type = 'text';
+    });
+
     App.$('#form-usuario').addEventListener('submit', function (e) {
       e.preventDefault();
       App.$('#usuario-error').textContent = '';
       var papel = App.$('#usuario-papel').value;
+      var setorId = Number(App.$('#usuario-setor').value);
+
+      if (papel === 'gestor' && !setorId) {
+        App.$('#usuario-error').textContent = 'Crie um setor ativo antes de cadastrar um gestor.';
+        return;
+      }
+
       var body = {
-        name: App.$('#usuario-nome').value.trim(),
-        username: App.$('#usuario-username').value.trim(),
+        name: campoNome.value.trim(),
+        username: campoUser.value.trim(),
         password: App.$('#usuario-senha').value,
         role: papel,
-        sectorId: papel === 'gestor' ? Number(App.$('#usuario-setor').value) : null
+        sectorId: papel === 'gestor' ? setorId : null
       };
+
       App.post('/api/users', body).then(function () {
-        App.$('#form-usuario').reset();
-        App.$('#form-usuario').hidden = true;
-        App.toast('Usuário criado.', 'ok');
+        App.closeModal('modal-usuario');
+        mostrarCredenciais(body.name, body.username, body.password);
         return carregarTudo();
       }).catch(function (e2) { App.$('#usuario-error').textContent = e2.message; });
     });
-  }
 
-  function bindResetModal() {
-    App.$('#btn-reset-cancelar').addEventListener('click', function () { App.closeModal('modal-reset'); });
+    // ---- reset de senha
+    App.$('#btn-gerar-reset').addEventListener('click', function () {
+      App.$('#reset-senha').value = App.gerarSenha();
+      App.$('#reset-senha').type = 'text';
+    });
+
     App.$('#form-reset').addEventListener('submit', function (e) {
       e.preventDefault();
       var senha = App.$('#reset-senha').value;
+      var alvo = state.users.filter(function (u) { return u.id === state.resetTargetId; })[0];
       App.$('#reset-error').textContent = '';
       App.post('/api/users/' + state.resetTargetId + '/reset-password', { password: senha }).then(function () {
         App.closeModal('modal-reset');
-        App.toast('Senha redefinida.', 'ok');
+        if (alvo) mostrarCredenciais(alvo.name, alvo.username, senha);
+        else App.toast('Senha redefinida.', 'ok');
       }).catch(function (e2) { App.$('#reset-error').textContent = e2.message; });
     });
+
+    // ---- credenciais
+    App.$('#btn-copiar-cred').addEventListener('click', function () {
+      var btn = App.$('#btn-copiar-cred');
+      App.copiar(App.$('#cred-texto').textContent).then(function (ok) {
+        btn.textContent = ok ? 'Copiado!' : 'Copie manualmente';
+        setTimeout(function () { btn.textContent = 'Copiar'; }, 2000);
+      });
+    });
+
+    // botoes "Cancelar"/"Pronto" de qualquer modal
+    App.$all('[data-fechar]').forEach(function (b) {
+      b.addEventListener('click', function () { App.closeModal(b.getAttribute('data-fechar')); });
+    });
+  }
+
+  function mostrarCredenciais(nome, username, senha) {
+    App.$('#cred-texto').textContent = 'Usu\u00e1rio: ' + username + '  |  Senha: ' + senha;
+    App.$('#t-cred').textContent = 'Credenciais de ' + nome;
+    App.openModal('modal-credenciais');
   }
 
   function bindEventos() {
     bindSetores();
     bindUsuarios();
     bindFormularios();
-    bindResetModal();
-
-    App.$('#btn-logout').addEventListener('click', function () {
-      App.post('/api/auth/logout').then(function () { location.href = '/login.html'; })
-        .catch(function () { location.href = '/login.html'; });
-    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

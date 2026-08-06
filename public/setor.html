@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meu Setor — Folha de Pagamento</title>
+  <title>Meu Setor &mdash; Folha de Pagamento</title>
   <meta name="application-name" content="Folha de Pagamento">
+  <meta name="theme-color" content="#08080a">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a0a0b'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
@@ -15,147 +16,216 @@
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/setor.html">
-      <span class="brand-mark">R$→$</span>
+      <span class="brand-mark">R$&rarr;$</span>
       <div>
-        <h1>Meu Setor</h1>
-        <p class="brand-sub" id="brand-sub">—</p>
+        <h1 id="titulo-setor">Meu Setor</h1>
+        <p class="brand-sub" id="brand-sub">&mdash;</p>
       </div>
     </a>
+
+    <div class="topbar-spacer"></div>
+
     <div class="topbar-user">
-      <button class="btn btn-ghost btn-sm" id="btn-senha" type="button">Trocar senha</button>
-      <div class="user-chip">
-        <span class="name" id="user-name">—</span>
-        <span class="role" id="user-role">—</span>
+      <div class="menu">
+        <button class="user-btn" type="button" data-menu-trigger aria-haspopup="true">
+          <span class="avatar" id="avatar">&mdash;</span>
+          <span class="user-btn-text">
+            <span class="name" id="user-name">&mdash;</span>
+            <span class="role" id="user-role">&mdash;</span>
+          </span>
+          <span class="caret">&#9660;</span>
+        </button>
+        <div class="menu-panel" role="menu">
+          <button class="menu-item" id="mi-senha" type="button" role="menuitem">
+            <span class="mi-ico">&#128273;</span> Trocar minha senha
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item danger" id="mi-sair" type="button" role="menuitem">
+            <span class="mi-ico">&#8594;]</span> Sair
+          </button>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">Sair</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
 
-  <section class="panel" aria-label="Competencia e parametros do mes">
-    <div class="panel-grid">
-      <div class="field">
-        <label for="competencia">Competência</label>
-        <div class="field-row">
-          <input type="month" id="competencia" class="input">
-          <button class="btn btn-ghost btn-sm" id="btn-copiar-mes" type="button">Copiar mês anterior</button>
+  <div class="toolbar">
+    <div class="toolbar-inner">
+
+      <div class="month-nav" id="month-nav">
+        <button type="button" data-mes-prev aria-label="M&ecirc;s anterior">&#8249;</button>
+        <label class="month-label">
+          <span>&mdash;</span>
+          <input type="month" id="competencia" aria-label="Compet&ecirc;ncia">
+        </label>
+        <button type="button" data-mes-next aria-label="Pr&oacute;ximo m&ecirc;s">&#8250;</button>
+      </div>
+      <button class="btn btn-sm btn-hoje" id="btn-hoje" type="button" hidden>M&ecirc;s atual</button>
+
+      <div class="search">
+        <span class="ico">&#9906;</span>
+        <input id="busca" type="search" placeholder="Buscar colaborador..." autocomplete="off">
+        <button class="clear" id="busca-clear" type="button" aria-label="Limpar busca">&times;</button>
+      </div>
+
+      <div class="toolbar-spacer"></div>
+
+      <div class="seg" role="group" aria-label="Modo de exibi&ccedil;&atilde;o">
+        <button class="seg-btn active" type="button" data-modo="completo">Completo</button>
+        <button class="seg-btn" type="button" data-modo="valores">S&oacute; valores</button>
+      </div>
+
+      <button class="btn btn-primary btn-sm" id="btn-add" type="button">
+        <span>+</span> Colaborador
+      </button>
+
+      <div class="menu">
+        <button class="btn btn-sm" type="button" data-menu-trigger aria-haspopup="true" aria-label="Mais a&ccedil;&otilde;es">
+          &#8943;
+        </button>
+        <div class="menu-panel" role="menu">
+          <button class="menu-item" id="mi-copiar" type="button" role="menuitem">
+            <span class="mi-ico">&#8635;</span>
+            <span><strong>Copiar do m&ecirc;s anterior</strong><span class="mi-sub">Traz todos os colaboradores e valores</span></span>
+          </button>
+          <button class="menu-item" id="mi-import" type="button" role="menuitem">
+            <span class="mi-ico">&#8593;</span>
+            <span><strong>Importar planilha (CSV)</strong><span class="mi-sub">Aceita o export do Excel/Sheets</span></span>
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-export" type="button" role="menuitem">
+            <span class="mi-ico">&#128202;</span> Exportar CSV do setor
+          </button>
+          <button class="menu-item" id="mi-print" type="button" role="menuitem">
+            <span class="mi-ico">&#128424;</span>
+            <span><strong>Imprimir / salvar PDF</strong><span class="mi-sub">Ctrl + P</span></span>
+          </button>
         </div>
       </div>
-      <div class="field">
-        <label>Taxa de conversão <span class="hint">(definida pela CCO)</span></label>
-        <input class="input" id="taxa-conversao" disabled>
-      </div>
-      <div class="field">
-        <label>Dias úteis no mês</label>
-        <input class="input" id="dias-uteis" disabled>
-      </div>
-      <div class="field">
-        <label>Taxa Wise</label>
-        <input class="input" id="taxa-wise" disabled>
-      </div>
+      <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+
     </div>
-  </section>
+  </div>
 
   <section class="kpis" aria-label="Resumo do setor">
-    <div class="kpi">
-      <span class="kpi-label">Colaboradores</span>
-      <strong class="kpi-value" id="kpi-qtd">0</strong>
-    </div>
     <div class="kpi kpi-blue">
       <span class="kpi-label">Total do setor</span>
       <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
-      <span class="kpi-foot" id="kpi-custo-diario">Custo diário: R$ 0,00</span>
+      <span class="kpi-foot" id="kpi-custo-diario">Custo di&aacute;rio: R$ 0,00</span>
     </div>
     <div class="kpi kpi-accent">
-      <span class="kpi-label">Total em dólar</span>
+      <span class="kpi-label">Equivalente em d&oacute;lar</span>
       <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
-      <span class="kpi-foot" id="kpi-taxa-usada">—</span>
+      <span class="kpi-foot" id="kpi-taxa-usada">&mdash;</span>
     </div>
     <div class="kpi kpi-amber">
-      <span class="kpi-label">Já pago</span>
+      <span class="kpi-label">Pagamentos</span>
       <strong class="kpi-value" id="kpi-pago">0 de 0</strong>
-      <span class="kpi-foot" id="kpi-pago-valor">R$ 0,00</span>
+      <span class="kpi-foot" id="kpi-pago-valor">R$ 0,00 enviados</span>
+      <span class="progress"><i id="kpi-progress" style="width:0%"></i></span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Colaboradores</span>
+      <strong class="kpi-value" id="kpi-qtd">0</strong>
+      <span class="kpi-foot" id="kpi-media">M&eacute;dia: R$ 0,00</span>
     </div>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Folha do setor</h2>
-      <div class="card-actions">
-        <button class="btn btn-primary" id="btn-add" type="button">+ Colaborador</button>
-        <button class="btn" id="btn-export-csv" type="button">Exportar CSV</button>
-        <button class="btn" id="btn-import-csv" type="button">Importar CSV</button>
-        <button class="btn" id="btn-print" type="button">Imprimir / PDF</button>
-        <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
-      </div>
-    </div>
+  <div class="chips" aria-label="Par&acirc;metros definidos pela CCO">
+    <span class="chip"><span class="k">Taxa de convers&atilde;o</span><span class="v" id="chip-taxa">&mdash;</span></span>
+    <span class="chip"><span class="k">Dias &uacute;teis</span><span class="v" id="chip-dias">&mdash;</span></span>
+    <span class="chip"><span class="k">Taxa Wise</span><span class="v" id="chip-wise">&mdash;</span></span>
+    <span class="chip" style="border-style:dashed;"><span class="k">Definidos pela CCO</span></span>
+  </div>
 
+  <section class="card" id="card-folha">
     <div class="table-scroll">
-      <table class="grid" id="tabela-folha">
+      <table class="grid modo-completo" id="tabela-folha">
         <thead>
           <tr>
-            <th class="col-idx" scope="col">#</th>
-            <th class="col-nome" scope="col">Nome</th>
-            <th class="num" scope="col">Salário base</th>
-            <th class="num" scope="col">Comissão</th>
-            <th class="num" scope="col">Aluguel / Outros</th>
-            <th class="num" scope="col">Bonificação</th>
-            <th class="num calc" scope="col">Total</th>
-            <th class="num calc" scope="col">Custo diário</th>
-            <th scope="col">Cidade</th>
-            <th scope="col">Cargo</th>
-            <th scope="col">Data</th>
-            <th class="col-obs" scope="col">OBS</th>
-            <th scope="col">Wise</th>
-            <th scope="col">Status</th>
-            <th class="col-acao" scope="col"><span class="sr-only">Ações</span></th>
+            <th class="col-idx stick" scope="col">#</th>
+            <th class="col-nome stick-2" scope="col">Nome</th>
+            <th class="num col-money sep-l" scope="col">Sal&aacute;rio base</th>
+            <th class="num col-money" scope="col">Comiss&atilde;o</th>
+            <th class="num col-money" scope="col">Aluguel / Outros</th>
+            <th class="num col-money" scope="col">Bonifica&ccedil;&atilde;o</th>
+            <th class="num col-calc sep-l" scope="col">Total R$</th>
+            <th class="num col-calc" scope="col">Custo di&aacute;rio</th>
+            <th class="num col-calc" scope="col">Em d&oacute;lar</th>
+            <th class="col-txt cad sep-l" scope="col">Cidade</th>
+            <th class="col-txt cad" scope="col">Cargo</th>
+            <th class="col-data cad" scope="col">Data</th>
+            <th class="col-obs cad" scope="col">OBS</th>
+            <th class="col-wise cad sep-l" scope="col">Link Wise</th>
+            <th class="col-status" scope="col">Status</th>
+            <th class="col-acao" scope="col"><span class="sr-only">A&ccedil;&otilde;es</span></th>
           </tr>
         </thead>
         <tbody id="tbody-folha"></tbody>
         <tfoot>
           <tr>
-            <td colspan="2" class="total-label">Total</td>
+            <td colspan="2" class="total-label stick">Total</td>
             <td class="num" id="t-salario">R$ 0,00</td>
             <td class="num" id="t-comissao">R$ 0,00</td>
             <td class="num" id="t-aluguel">R$ 0,00</td>
             <td class="num" id="t-bonificacao">R$ 0,00</td>
-            <td class="num calc" id="t-total">R$ 0,00</td>
-            <td class="num calc" id="t-diario">R$ 0,00</td>
-            <td colspan="6"></td>
+            <td class="num" id="t-total">R$ 0,00</td>
+            <td class="num" id="t-diario">R$ 0,00</td>
+            <td class="num calc-usd" id="t-dolar">$0.00</td>
+            <td class="cad" colspan="5"></td>
+            <td colspan="2"></td>
           </tr>
         </tfoot>
       </table>
     </div>
 
-    <p class="empty" id="empty-folha" hidden>
-      Nenhum colaborador ainda. Clique em <strong>+ Colaborador</strong> para começar.
-    </p>
+    <div class="empty" id="empty-folha" hidden>
+      <span class="empty-ico">&#128100;</span>
+      <strong>Nenhum colaborador em <span id="empty-mes">&mdash;</span></strong>
+      <p>Comece do zero ou traga tudo do m&ecirc;s passado &mdash; nomes, valores e dados, prontos para ajustar.</p>
+      <button class="btn btn-primary" id="btn-add-vazio" type="button">+ Adicionar colaborador</button>
+      <button class="btn" id="btn-copiar-vazio" type="button">&#8635; Copiar do m&ecirc;s anterior</button>
+    </div>
+
+    <div class="empty" id="empty-busca" hidden>
+      <span class="empty-ico">&#9906;</span>
+      <strong>Nada encontrado</strong>
+      <p>Nenhum colaborador corresponde &agrave; sua busca.</p>
+    </div>
   </section>
 
   <footer class="foot">
-    <p>A cotação e as taxas do mês são definidas pela CCO. Os valores em dólar são calculados automaticamente.</p>
+    <p>Tudo salva sozinho. Itens marcados como <strong>pagos</strong> pela CCO ficam travados.</p>
+    <p><kbd>Alt</kbd> + <kbd>&larr;</kbd> <kbd>&rarr;</kbd> troca de m&ecirc;s &middot; <kbd>Enter</kbd> desce uma linha &middot; <kbd>/</kbd> busca</p>
   </footer>
 
 </main>
 
 <div class="modal-backdrop" id="modal-senha">
-  <div class="modal">
-    <h3>Trocar senha</h3>
-    <p class="hint">Sua senha atual e a nova senha, com pelo menos 8 caracteres.</p>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-senha">
+    <div class="modal-icon">&#128273;</div>
+    <h3 id="t-senha">Trocar senha</h3>
+    <p class="hint">Informe a senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
     <form class="modal-form" id="form-senha">
       <div class="field">
         <label for="senha-atual">Senha atual</label>
-        <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+        <div class="pw-wrap">
+          <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+        </div>
       </div>
       <div class="field">
         <label for="senha-nova">Nova senha</label>
-        <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+        <div class="pw-wrap">
+          <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+        </div>
       </div>
       <p class="error-text" id="senha-error" role="alert"></p>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" id="btn-senha-cancelar">Cancelar</button>
+        <button class="btn" type="button" id="btn-senha-cancelar">Cancelar</button>
         <button class="btn btn-primary" type="submit">Salvar</button>
       </div>
     </form>
