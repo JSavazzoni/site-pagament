@@ -7,7 +7,7 @@
 const path = require('node:path');
 const express = require('express');
 
-const { cookieParser, ensureDb, errorHandler } = require('./middleware.js');
+const { cookieParser, ensureDb, requireAuth, errorHandler } = require('./middleware.js');
 const authRoutes = require('./routes/auth.routes.js');
 const sectorsRoutes = require('./routes/sectors.routes.js');
 const usersRoutes = require('./routes/users.routes.js');
@@ -72,8 +72,11 @@ app.get('/api/health', (req, res) => {
 // configurado (Vercel sem Turso), vira um 503 explicativo em vez de 500
 app.use('/api', ensureDb);
 
-/** Mesma sonda, mas indo ao banco: /api/health + 1 consulta trivial. */
-app.get('/api/db-ping', async (req, res, next) => {
+/**
+ * Mesma sonda, mas indo ao banco. Exige sessao de proposito: endpoint publico
+ * que dispara consulta e um amplificador barato para quem quiser martelar.
+ */
+app.get('/api/db-ping', requireAuth, async (req, res, next) => {
   try {
     const ini = Date.now();
     await require('./db.js').get('SELECT 1 AS ok');
