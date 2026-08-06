@@ -16,13 +16,13 @@ router.get('/quote', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/config/:competencia', requireAuth, (req, res, next) => {
+router.get('/config/:competencia', requireAuth, async (req, res, next) => {
   const { competencia } = req.params;
   if (!COMPETENCIA_RE.test(competencia)) return next(badRequest('Competencia invalida (use AAAA-MM).'));
-  res.json(repo.get(competencia));
+  res.json(await repo.get(competencia));
 });
 
-router.put('/config/:competencia', requireAuth, requireRole('cco'), (req, res, next) => {
+router.put('/config/:competencia', requireAuth, requireRole('cco'), async (req, res, next) => {
   const { competencia } = req.params;
   if (!COMPETENCIA_RE.test(competencia)) return next(badRequest('Competencia invalida (use AAAA-MM).'));
   const body = req.body || {};
@@ -37,7 +37,7 @@ router.put('/config/:competencia', requireAuth, requireRole('cco'), (req, res, n
     return next(badRequest('Taxa de conversao precisa ser maior que zero.'));
   }
 
-  res.json(repo.update(competencia, body, req.user.id));
+  res.json(await repo.update(competencia, body, req.user.id));
 });
 
 module.exports = router;

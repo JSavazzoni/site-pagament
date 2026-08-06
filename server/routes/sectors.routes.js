@@ -6,21 +6,21 @@ const { requireAuth, requireRole, badRequest, notFound, conflict } = require('..
 const router = express.Router();
 router.use(requireAuth, requireRole('cco'));
 
-router.get('/', (req, res) => {
-  res.json(repo.list());
+router.get('/', async (req, res) => {
+  res.json(await repo.list());
 });
 
-router.post('/', (req, res, next) => {
+router.post('/', async (req, res, next) => {
   const name = String((req.body && req.body.name) || '').trim();
   if (!name) return next(badRequest('Nome do setor e obrigatorio.'));
   if (name.length > 80) return next(badRequest('Nome do setor muito longo (maximo 80 caracteres).'));
-  if (repo.nameTaken(name)) return next(conflict('Ja existe um setor com esse nome.'));
-  res.status(201).json(repo.create(name));
+  if (await repo.nameTaken(name)) return next(conflict('Ja existe um setor com esse nome.'));
+  res.status(201).json(await repo.create(name));
 });
 
-router.patch('/:id', (req, res, next) => {
+router.patch('/:id', async (req, res, next) => {
   const id = Number(req.params.id);
-  const existing = repo.getById(id);
+  const existing = await repo.getById(id);
   if (!existing) return next(notFound('Setor nao encontrado.'));
 
   const body = req.body || {};
@@ -29,11 +29,11 @@ router.patch('/:id', (req, res, next) => {
   if (typeof body.name === 'string' && body.name.trim()) {
     const name = body.name.trim();
     if (name.length > 80) return next(badRequest('Nome do setor muito longo (maximo 80 caracteres).'));
-    if (repo.nameTaken(name, id)) return next(conflict('Ja existe um setor com esse nome.'));
-    result = repo.rename(id, name);
+    if (await repo.nameTaken(name, id)) return next(conflict('Ja existe um setor com esse nome.'));
+    result = await repo.rename(id, name);
   }
   if (typeof body.active === 'boolean') {
-    result = repo.setActive(id, body.active);
+    result = await repo.setActive(id, body.active);
   }
   res.json(result);
 });

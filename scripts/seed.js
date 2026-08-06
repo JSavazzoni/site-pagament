@@ -1,8 +1,11 @@
 'use strict';
 /**
- * Cria o schema (via require de server/db.js) e a primeira conta CCO.
- * Idempotente: recusa criar uma 2a conta CCO se ja existir uma, pra nao
- * gerar confusao sobre qual senha esta valendo.
+ * Cria o schema e a primeira conta CCO. Idempotente: recusa criar uma 2a
+ * conta CCO se ja existir uma.
+ *
+ * Funciona contra o banco LOCAL (padrao) ou contra o TURSO DE PRODUCAO --
+ * basta exportar TURSO_DATABASE_URL e TURSO_AUTH_TOKEN antes de rodar.
+ * E assim que se cria a conta CCO do site no Vercel (veja o README).
  *
  * Uso:
  *   node scripts/seed.js
@@ -19,8 +22,11 @@ function randomPassword() {
   return crypto.randomBytes(12).toString('base64url');
 }
 
-function main() {
-  const existente = db.prepare("SELECT id, username FROM users WHERE role = 'cco' LIMIT 1").get();
+async function main() {
+  await db.init();
+  console.log(`Banco: ${db.backendName()}`);
+
+  const existente = await db.get("SELECT id, username FROM users WHERE role = 'cco' LIMIT 1");
   if (existente) {
     console.log(`Ja existe uma conta CCO ("${existente.username}"). Nada foi criado.`);
     console.log('Para redefinir a senha de um usuario existente, use: npm run reset-password -- <username>');
@@ -41,9 +47,10 @@ function main() {
   }
 
   const { hash, salt } = auth.hashPassword(password);
-  db.prepare(
-    'INSERT INTO users (name, username, password_hash, password_salt, role, sector_id) VALUES (?, ?, ?, ?, ?, NULL)'
-  ).run('CCO', username, hash, salt, 'cco');
+  await db.run(
+    'INSERT INTO users (name, username, password_hash, password_salt, role, sector_id) VALUES (?, ?, ?, ?, ?, NULL)',
+    ['CCO', username, hash, salt, 'cco']
+  );
 
   console.log('Conta CCO criada com sucesso.');
   console.log('----------------------------------------');
@@ -59,4 +66,7 @@ function main() {
   console.log('----------------------------------------');
 }
 
-main();
+main().catch((err) => {
+  console.error('Falha no seed:', err.message);
+  process.exit(1);
+});

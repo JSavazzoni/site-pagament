@@ -71,3 +71,11 @@ CREATE TABLE IF NOT EXISTS folha_itens (
 );
 CREATE INDEX IF NOT EXISTS idx_folha_sector_comp ON folha_itens(sector_id, competencia);
 CREATE INDEX IF NOT EXISTS idx_folha_comp ON folha_itens(competencia);
+
+-- Rate limit de login persistido no banco: em serverless cada requisicao pode
+-- cair numa instancia nova, entao contador em memoria nao segura brute-force.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  key            TEXT PRIMARY KEY,
+  count          INTEGER NOT NULL DEFAULT 1,
+  first_attempt  INTEGER NOT NULL
+);

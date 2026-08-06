@@ -1,8 +1,10 @@
 'use strict';
 /**
- * CLI de emergencia para redefinir a senha de qualquer usuario
- * (inclusive a propria CCO) sem passar pela UI -- nao ha recuperacao
- * de senha por e-mail neste sistema.
+ * CLI de emergencia para redefinir a senha de qualquer usuario (inclusive a
+ * propria CCO) sem passar pela UI -- nao ha recuperacao por e-mail.
+ *
+ * Funciona contra o banco LOCAL (padrao) ou contra o TURSO DE PRODUCAO --
+ * basta exportar TURSO_DATABASE_URL e TURSO_AUTH_TOKEN antes de rodar.
  *
  * Uso:
  *   node scripts/reset-password.js <username> [nova-senha]
@@ -17,7 +19,7 @@ function randomPassword() {
   return crypto.randomBytes(12).toString('base64url');
 }
 
-function main() {
+async function main() {
   const usernameArg = process.argv[2];
   const passwordArg = process.argv[3];
 
@@ -26,8 +28,11 @@ function main() {
     process.exit(1);
   }
 
+  await db.init();
+  console.log(`Banco: ${db.backendName()}`);
+
   const username = auth.normalizeUsername(usernameArg);
-  const user = db.prepare('SELECT id, role FROM users WHERE username = ?').get(username);
+  const user = await db.get('SELECT id, role FROM users WHERE username = ?', [username]);
   if (!user) {
     console.error(`Nenhum usuario encontrado com username "${username}".`);
     process.exit(1);
@@ -41,9 +46,11 @@ function main() {
   }
 
   const { hash, salt } = auth.hashPassword(password);
-  db.prepare('UPDATE users SET password_hash = ?, password_salt = ?, updated_at = strftime(\'%Y-%m-%dT%H:%M:%fZ\',\'now\') WHERE id = ?')
-    .run(hash, salt, user.id);
-  auth.revokeAllSessionsForUser(user.id);
+  await db.run(
+    "UPDATE users SET password_hash = ?, password_salt = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
+    [hash, salt, user.id]
+  );
+  await auth.revokeAllSessionsForUser(user.id);
 
   console.log(`Senha redefinida para "${username}" (${user.role}). Sessoes ativas foram encerradas.`);
   if (gerouSenha) {
@@ -52,4 +59,7 @@ function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error('Falha ao redefinir senha:', err.message);
+  process.exit(1);
+});

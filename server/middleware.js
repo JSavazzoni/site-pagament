@@ -1,5 +1,6 @@
 'use strict';
 const auth = require('./auth.js');
+const db = require('./db.js');
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -27,11 +28,21 @@ function cookieParser(req, res, next) {
   next();
 }
 
+/**
+ * Garante o banco pronto antes de qualquer rota de API. Memoizado no db --
+ * custo ~zero depois da primeira requisicao da instancia. Se estiver no
+ * Vercel sem Turso configurado, cai no errorHandler com um 503 explicativo
+ * em vez de um 500 criptico.
+ */
+function ensureDb(req, res, next) {
+  db.init().then(() => next(), next);
+}
+
 /** Sempre rebusca role/sector_id/active frescos do banco -- nunca confia em cache. */
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = req.cookies && req.cookies[auth.COOKIE_NAME];
-  const user = auth.verifySession(token);
-  if (!user) return next(new HttpError(401, 'Sessao invalida ou expirada.'));
+  const user = await auth.verifySession(token);
+  if (!user) throw new HttpError(401, 'Sessao invalida ou expirada.');
   req.user = user;
   next();
 }
@@ -66,24 +77,26 @@ function errorHandler(err, req, res, next) {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
-  if (err && err.code === 'ERR_SQLITE_ERROR') {
-    if (/UNIQUE constraint failed/.test(err.message)) {
-      return res.status(409).json({ error: 'Ja existe um registro com esses dados.' });
-    }
-    if (/CHECK constraint failed/.test(err.message)) {
-      return res.status(400).json({ error: 'Dados invalidos para este registro.' });
-    }
-    if (/FOREIGN KEY constraint failed/.test(err.message)) {
-      return res.status(409).json({ error: 'Este registro ainda tem dados vinculados.' });
-    }
-    console.error(err);
-    return res.status(500).json({ error: 'Erro no banco de dados.' });
+  if (err instanceof db.DbNotConfiguredError) {
+    return res.status(503).json({ error: err.message });
+  }
+  // constraints valem para os dois backends (node:sqlite e libsql/Turso);
+  // os codigos de erro diferem entre eles, a mensagem nao.
+  const msg = String((err && err.message) || '');
+  if (/UNIQUE constraint failed/.test(msg)) {
+    return res.status(409).json({ error: 'Ja existe um registro com esses dados.' });
+  }
+  if (/CHECK constraint failed/.test(msg)) {
+    return res.status(400).json({ error: 'Dados invalidos para este registro.' });
+  }
+  if (/FOREIGN KEY constraint failed/.test(msg)) {
+    return res.status(409).json({ error: 'Este registro ainda tem dados vinculados.' });
   }
   console.error(err);
   res.status(500).json({ error: 'Erro interno do servidor.' });
 }
 
 module.exports = {
-  HttpError, cookieParser, requireAuth, requireRole,
+  HttpError, cookieParser, ensureDb, requireAuth, requireRole,
   notFound, badRequest, conflict, forbidden, errorHandler
 };

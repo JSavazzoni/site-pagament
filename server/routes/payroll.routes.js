@@ -21,9 +21,9 @@ function sectorIdFor(req, raw) {
 }
 
 /** Carrega o item e confere posse; gestor de outro setor recebe 404 (nao 403 -- nao confirma existencia). */
-function loadOwnedItem(req) {
+async function loadOwnedItem(req) {
   const id = Number(req.params.id);
-  const item = payrollRepo.getById(id);
+  const item = await payrollRepo.getById(id);
   if (!item) return { error: notFound('Lancamento nao encontrado.') };
   if (req.user.role === 'gestor' && item.sectorId !== req.user.sectorId) {
     return { error: notFound('Lancamento nao encontrado.') };
@@ -31,29 +31,29 @@ function loadOwnedItem(req) {
   return { item };
 }
 
-router.get('/summary', requireAuth, requireRole('cco'), (req, res, next) => {
+router.get('/summary', requireAuth, requireRole('cco'), async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
-  const config = configRepo.get(competencia);
-  res.json(payrollRepo.summary(competencia, config));
+  const config = await configRepo.get(competencia);
+  res.json(await payrollRepo.summary(competencia, config));
 });
 
-router.get('/export.csv', requireAuth, (req, res, next) => {
+router.get('/export.csv', requireAuth, async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
-  const config = configRepo.get(competencia);
+  const config = await configRepo.get(competencia);
 
   let itens;
   let comSetor = false;
   if (req.user.role === 'gestor') {
-    itens = payrollRepo.listBySector(req.user.sectorId, competencia);
+    itens = await payrollRepo.listBySector(req.user.sectorId, competencia);
   } else if (req.query.sectorId) {
     const sectorId = Number(req.query.sectorId);
-    if (!sectorsRepo.getById(sectorId)) return next(badRequest('Setor informado nao existe.'));
-    itens = payrollRepo.listBySector(sectorId, competencia);
+    if (!(await sectorsRepo.getById(sectorId))) return next(badRequest('Setor informado nao existe.'));
+    itens = await payrollRepo.listBySector(sectorId, competencia);
   } else {
     comSetor = true;
-    const s = payrollRepo.summary(competencia, config);
+    const s = await payrollRepo.summary(competencia, config);
     itens = s.sectors.flatMap((sec) => sec.itens.map((it) => ({ ...it, sectorName: sec.sectorName })));
   }
 
@@ -63,21 +63,21 @@ router.get('/export.csv', requireAuth, (req, res, next) => {
   res.send(body);
 });
 
-router.get('/export-wise.csv', requireAuth, (req, res, next) => {
+router.get('/export-wise.csv', requireAuth, async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
-  const config = configRepo.get(competencia);
+  const config = await configRepo.get(competencia);
 
   let itens;
   if (req.user.role === 'gestor') {
-    itens = payrollRepo.listBySector(req.user.sectorId, competencia).map((it) => ({ ...it, sectorName: '' }));
+    itens = (await payrollRepo.listBySector(req.user.sectorId, competencia)).map((it) => ({ ...it, sectorName: '' }));
   } else if (req.query.sectorId) {
     const sectorId = Number(req.query.sectorId);
-    const sector = sectorsRepo.getById(sectorId);
+    const sector = await sectorsRepo.getById(sectorId);
     if (!sector) return next(badRequest('Setor informado nao existe.'));
-    itens = payrollRepo.listBySector(sectorId, competencia).map((it) => ({ ...it, sectorName: sector.name }));
+    itens = (await payrollRepo.listBySector(sectorId, competencia)).map((it) => ({ ...it, sectorName: sector.name }));
   } else {
-    const s = payrollRepo.summary(competencia, config);
+    const s = await payrollRepo.summary(competencia, config);
     itens = s.sectors.flatMap((sec) => sec.itens.map((it) => ({ ...it, sectorName: sec.sectorName })));
   }
 
@@ -87,13 +87,13 @@ router.get('/export-wise.csv', requireAuth, (req, res, next) => {
   res.send(body);
 });
 
-router.post('/import', requireAuth, (req, res, next) => {
+router.post('/import', requireAuth, async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
 
   const sectorId = sectorIdFor(req, req.query.sectorId);
   if (!sectorId) return next(badRequest('Informe sectorId.'));
-  if (!sectorsRepo.getById(sectorId)) return next(badRequest('Setor informado nao existe.'));
+  if (!(await sectorsRepo.getById(sectorId))) return next(badRequest('Setor informado nao existe.'));
 
   const texto = typeof req.body === 'string' ? req.body : '';
   if (!texto.trim()) return next(badRequest('Envie o CSV como corpo da requisicao (text/csv).'));
@@ -115,7 +115,8 @@ router.post('/import', requireAuth, (req, res, next) => {
   if (idxCab === -1) return next(badRequest('Nao encontrei a coluna "Nome" no arquivo.'));
 
   if (req.query.replace === '1') {
-    payrollRepo.listBySector(sectorId, competencia).forEach((it) => payrollRepo.remove(it.id));
+    const atuais = await payrollRepo.listBySector(sectorId, competencia);
+    for (const it of atuais) await payrollRepo.remove(it.id);
   }
 
   let importados = 0;
@@ -134,7 +135,7 @@ router.post('/import', requireAuth, (req, res, next) => {
       temDado = true;
     }
     if (temDado && item.nome) {
-      payrollRepo.create({ sectorId, competencia, ...item, createdBy: req.user.id });
+      await payrollRepo.create({ sectorId, competencia, ...item, createdBy: req.user.id });
       importados += 1;
     }
   }
@@ -142,39 +143,39 @@ router.post('/import', requireAuth, (req, res, next) => {
   res.json({ imported: importados });
 });
 
-router.post('/copy-previous', requireAuth, (req, res, next) => {
+router.post('/copy-previous', requireAuth, async (req, res, next) => {
   const body = req.body || {};
   const { competencia } = body;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
 
   const sectorId = sectorIdFor(req, body.sectorId);
   if (!sectorId) return next(badRequest('Informe sectorId.'));
-  if (!sectorsRepo.getById(sectorId)) return next(badRequest('Setor informado nao existe.'));
+  if (!(await sectorsRepo.getById(sectorId))) return next(badRequest('Setor informado nao existe.'));
 
-  const result = payrollRepo.copyPrevious({ sectorId, competencia, replace: !!body.replace, createdBy: req.user.id });
+  const result = await payrollRepo.copyPrevious({ sectorId, competencia, replace: !!body.replace, createdBy: req.user.id });
   if (!result.copied && result.existing) {
     return res.status(409).json({ error: 'Ja existem lancamentos nesta competencia.', existing: result.existing });
   }
   res.json(result);
 });
 
-router.get('/', requireAuth, (req, res, next) => {
+router.get('/', requireAuth, async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
 
   const sectorId = sectorIdFor(req, req.query.sectorId);
   if (!sectorId) return next(badRequest('Informe sectorId.'));
-  const sector = sectorsRepo.getById(sectorId);
+  const sector = await sectorsRepo.getById(sectorId);
   if (!sector) return next(notFound('Setor nao encontrado.'));
 
-  const config = configRepo.get(competencia);
-  const itens = payrollRepo.listBySector(sectorId, competencia).map((it) => withCalc(it, config));
+  const config = await configRepo.get(competencia);
+  const itens = (await payrollRepo.listBySector(sectorId, competencia)).map((it) => withCalc(it, config));
   const totals = Calc.calcTotais(itens, config);
 
   res.json({ competencia, sector, config, itens, totals });
 });
 
-router.post('/', requireAuth, (req, res, next) => {
+router.post('/', requireAuth, async (req, res, next) => {
   const body = req.body || {};
   const { competencia } = body;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
@@ -184,57 +185,57 @@ router.post('/', requireAuth, (req, res, next) => {
   }
   const sectorId = sectorIdFor(req, body.sectorId);
   if (!sectorId) return next(badRequest('Informe sectorId.'));
-  if (!sectorsRepo.getById(sectorId)) return next(badRequest('Setor informado nao existe.'));
+  if (!(await sectorsRepo.getById(sectorId))) return next(badRequest('Setor informado nao existe.'));
 
-  // nome pode ficar vazio na criacao -- interacao e estilo planilha (like a legacy
-  // spreadsheet): "+ Colaborador" cria a linha na hora, o usuario preenche o nome depois.
+  // nome pode ficar vazio na criacao -- interacao e estilo planilha: "+ Colaborador"
+  // cria a linha na hora e o usuario preenche o nome depois.
   const nome = String(body.nome || '').trim();
 
-  const created = payrollRepo.create({
+  const created = await payrollRepo.create({
     sectorId, competencia, nome,
     salarioBase: body.salarioBase, comissao: body.comissao, aluguel: body.aluguel, bonificacao: body.bonificacao,
     cidade: body.cidade, cargo: body.cargo, data: body.data, obs: body.obs, wiseLink: body.wiseLink,
     createdBy: req.user.id
   });
-  const config = configRepo.get(competencia);
+  const config = await configRepo.get(competencia);
   res.status(201).json(withCalc(created, config));
 });
 
-router.patch('/:id/pago', requireAuth, requireRole('cco'), (req, res, next) => {
+router.patch('/:id/pago', requireAuth, requireRole('cco'), async (req, res, next) => {
   const id = Number(req.params.id);
-  const item = payrollRepo.getById(id);
+  const item = await payrollRepo.getById(id);
   if (!item) return next(notFound('Lancamento nao encontrado.'));
 
   const pago = !!(req.body && req.body.pago);
-  const updated = payrollRepo.setPago(id, pago);
-  const config = configRepo.get(item.competencia);
+  const updated = await payrollRepo.setPago(id, pago);
+  const config = await configRepo.get(item.competencia);
   res.json(withCalc(updated, config));
 });
 
-router.patch('/:id', requireAuth, (req, res, next) => {
-  const { item, error } = loadOwnedItem(req);
+router.patch('/:id', requireAuth, async (req, res, next) => {
+  const { item, error } = await loadOwnedItem(req);
   if (error) return next(error);
   if (req.user.role === 'gestor' && item.pago) {
     return next(forbidden('Este lancamento ja foi pago e nao pode ser editado.'));
   }
 
   const body = req.body || {};
-  const updated = payrollRepo.update(item.id, {
+  const updated = await payrollRepo.update(item.id, {
     nome: body.nome, salarioBase: body.salarioBase, comissao: body.comissao, aluguel: body.aluguel,
     bonificacao: body.bonificacao, cidade: body.cidade, cargo: body.cargo, data: body.data,
     obs: body.obs, wiseLink: body.wiseLink
   });
-  const config = configRepo.get(item.competencia);
+  const config = await configRepo.get(item.competencia);
   res.json(withCalc(updated, config));
 });
 
-router.delete('/:id', requireAuth, (req, res, next) => {
-  const { item, error } = loadOwnedItem(req);
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  const { item, error } = await loadOwnedItem(req);
   if (error) return next(error);
   if (req.user.role === 'gestor' && item.pago) {
     return next(forbidden('Este lancamento ja foi pago e nao pode ser removido.'));
   }
-  payrollRepo.remove(item.id);
+  await payrollRepo.remove(item.id);
   res.status(204).end();
 });
 

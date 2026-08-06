@@ -1,9 +1,13 @@
 'use strict';
 /**
- * Cotacao ao vivo no servidor (AwesomeAPI + fallback exchangerate-api),
- * portado do buscarCotacao() da versao single-usuario. Cache em memoria
- * (~5 min) pra nao martelar a API externa a cada requisicao de cada
- * usuario logado.
+ * Cotacao ao vivo no servidor (AwesomeAPI + fallback exchangerate-api).
+ * Cache em memoria (~5 min) por instancia.
+ *
+ * Serverless nao tem processo residente, entao NAO ha setInterval em producao:
+ * o sync das competencias marcadas como "taxa automatica" acontece de forma
+ * LAZY -- toda vez que uma cotacao fresca e buscada (o painel da CCO chama
+ * /api/quote ao abrir e a cada 5 min), ela e aplicada no config_mes.
+ * O setInterval so existe no modo local (chamado por server/index.js).
  */
 const configRepo = require('./repo/config.repo.js');
 
@@ -51,6 +55,11 @@ async function getQuote(force) {
   try {
     const data = await fetchLive();
     cache = { data, at: Date.now() };
+    // sync lazy: aplica em toda competencia com taxa automatica ligada.
+    // Nao pode derrubar a requisicao da cotacao se o banco falhar.
+    try { await configRepo.syncAutoRates(data.usd); } catch (err) {
+      console.error('Falha ao aplicar cotacao automatica:', err.message);
+    }
     return data;
   } catch (err) {
     if (cache.data) return cache.data; // serve algo desatualizado em vez de derrubar a requisicao
@@ -58,19 +67,10 @@ async function getQuote(force) {
   }
 }
 
-/** Busca a cotacao e aplica em toda competencia marcada como auto-sync. */
-async function syncTick() {
-  try {
-    const data = await getQuote(false);
-    configRepo.syncAutoRates(data.usd);
-  } catch (err) {
-    console.error('Falha ao sincronizar cotacao automatica:', err.message);
-  }
-}
-
+/** Loop periodico -- so para o modo local (processo residente). */
 function startAutoSync(intervalMs) {
-  syncTick();
-  const timer = setInterval(syncTick, intervalMs || 10 * 60 * 1000);
+  getQuote(false).catch(() => {});
+  const timer = setInterval(() => { getQuote(true).catch(() => {}); }, intervalMs || 10 * 60 * 1000);
   timer.unref();
   return timer;
 }
