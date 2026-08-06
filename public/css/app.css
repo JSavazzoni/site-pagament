@@ -1,10 +1,4 @@
-/* ============================================================
-   Folha de Pagamento - design system (tema escuro)
-   Compartilhado por login.html, setor.html, painel.html, admin.html
-   ============================================================ */
-
 :root {
-  /* superficies: preto quase puro, com elevacao por camadas */
   --bg:        #08080a;
   --bg-2:      #0c0c0f;
   --surface:   #121216;
@@ -35,7 +29,6 @@
   --amber-dim:  #33280a;
   --amber-line: #5c4413;
 
-  /* libra: violeta, para nunca ser confundida com o verde do dolar */
   --violet:      #a78bfa;
   --violet-dim:  #1e1733;
   --violet-line: #3b2f66;
@@ -84,11 +77,9 @@ p { color: var(--ink-2); }
 }
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* icones SVG: acompanham a cor e o tamanho do texto ao redor */
 .ico { display: block; flex: none; }
 button .ico, a .ico, label .ico { pointer-events: none; }
 
-/* entradas suaves -- o que da vida sem virar espetaculo */
 @keyframes surgir { from { opacity: 0; transform: translateY(6px); } }
 @keyframes surgirCurto { from { opacity: 0; transform: translateY(3px); } }
 .kpis > .kpi { animation: surgir .32s cubic-bezier(.2, .8, .3, 1) backwards; }
@@ -107,7 +98,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .menu.open .menu-item:nth-child(3) { animation-delay: .06s; }
 .menu.open .menu-item:nth-child(4) { animation-delay: .09s; }
 
-/* barra de rolagem escura */
 * { scrollbar-color: var(--line-3) transparent; scrollbar-width: thin; }
 *::-webkit-scrollbar { height: 11px; width: 11px; }
 *::-webkit-scrollbar-track { background: transparent; }
@@ -162,7 +152,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 
 .topbar-user { display: flex; align-items: center; gap: 8px; flex: none; }
 
-/* avatar + menu do usuario */
 .user-btn {
   display: flex; align-items: center; gap: 9px;
   background: transparent; border: 1px solid transparent;
@@ -215,7 +204,8 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .toolbar-inner { max-width: 1720px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .toolbar-spacer { flex: 1; min-width: 0; }
 
-/* navegador de mes */
+.toolbar-inner > * { margin-bottom: 2px; }
+
 .month-nav {
   display: inline-flex; align-items: stretch;
   background: var(--surface-2);
@@ -249,7 +239,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .month-nav .month-label span { pointer-events: none; }
 .btn-hoje { flex: none; }
 
-/* busca */
 .search {
   position: relative; flex: 0 1 300px; min-width: 170px;
 }
@@ -276,7 +265,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .search .clear:hover { color: var(--ink); background: var(--surface-4); }
 .search input:placeholder-shown ~ .clear { display: none; }
 
-/* chip de cotacao ao vivo */
 .quote-chip {
   display: inline-flex; align-items: center; gap: 8px; flex: none;
   background: var(--surface-2); border: 1px solid var(--line-2);
@@ -350,6 +338,36 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .loading .ico-refresh, .is-loading .ico-refresh { animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.is-loading { position: relative; pointer-events: none; }
+.is-loading::after {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(8, 8, 10, .45);
+  border-radius: inherit;
+}
+.is-loading::before {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px; z-index: 1;
+  border: 2px solid var(--ink-3); border-top-color: var(--accent);
+  border-radius: 999px; animation: spin .7s linear infinite;
+}
+
+.btn-wise {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: inherit; font-size: 11px; font-weight: 650;
+  color: var(--ink-2); background: var(--surface-3);
+  border: 1px solid var(--line-2); border-radius: 999px;
+  padding: 4px 9px; text-decoration: none;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.btn-wise:hover { background: var(--surface-4); border-color: var(--line-3); color: var(--ink); }
+.btn-wise .ico { color: var(--accent-hi); }
+
+.enviar-alt {
+  font-size: 10.5px; color: var(--violet); font-weight: 600;
+  font-variant-numeric: tabular-nums; margin-top: 1px;
+}
+.enviar-alt::before { content: '≈ '; color: var(--ink-4); }
+
 /* ============================================================
    Menu suspenso (substitui filas de botoes)
    ============================================================ */
@@ -380,7 +398,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
   transition: background .13s, color .13s;
 }
 .menu-item:hover { background: var(--surface-4); color: var(--ink); }
-/* fiozinho no lado esquerdo ao passar o mouse: da o sentido de selecao */
 .menu-item::before {
   content: ''; position: absolute; left: 3px; top: 50%;
   width: 2px; height: 0; border-radius: 2px;
@@ -445,7 +462,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .input-num { font-variant-numeric: tabular-nums; }
 select.input { cursor: pointer; }
 
-/* campo com prefixo/sufixo (R$, %, ...) */
 .input-affix {
   display: flex; align-items: center;
   background: var(--surface-2); border: 1px solid var(--line-2);
@@ -463,7 +479,6 @@ select.input { cursor: pointer; }
 .input-affix input:focus { outline: none; }
 .input-affix input:disabled { color: var(--ink-3); cursor: not-allowed; }
 
-/* senha com botao de revelar */
 .pw-wrap { position: relative; }
 .pw-wrap .input { padding-right: 42px; }
 .pw-toggle {
@@ -509,10 +524,12 @@ select.input { cursor: pointer; }
 .kpi-violet::before { background: var(--violet); }
 .kpi-violet .kpi-value { color: var(--violet); }
 
+.kpi:hover { border-color: var(--line-2); }
+.kpi:hover::before { width: 3px; }
+
 .delta.up   { color: var(--red); font-weight: 600; }
 .delta.down { color: var(--accent-hi); font-weight: 600; }
 
-/* barra de progresso dentro do KPI */
 .progress { height: 4px; border-radius: 999px; background: var(--surface-4); overflow: hidden; margin-top: 9px; }
 .progress > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-lo), var(--accent)); transition: width .3s ease; }
 
@@ -532,7 +549,6 @@ select.input { cursor: pointer; }
 .badge-red    { background: var(--red-dim); color: var(--red); box-shadow: inset 0 0 0 1px var(--red-line); }
 .badge-neutral{ background: var(--surface-3); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-2); }
 
-/* tiras de parametro somente-leitura (gestor) */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   display: inline-flex; align-items: baseline; gap: 7px;
@@ -564,7 +580,6 @@ select.input { cursor: pointer; }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .card-body { padding: 16px; }
 
-/* card recolhivel (parametros do mes) */
 .collapse { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .collapse-head {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -600,8 +615,6 @@ select.input { cursor: pointer; }
   color: var(--ink-3);
   font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
   text-align: left; padding: 8px 9px;
-  /* o titulo quebra em duas linhas em vez de forcar a coluna a ficar larga --
-     assim nenhuma celula de dado precisa ser espremida por causa do cabecalho */
   white-space: normal; line-height: 1.25; vertical-align: bottom;
   border-bottom: 1px solid var(--line-2);
 }
@@ -620,22 +633,16 @@ select.input { cursor: pointer; }
 .grid tbody tr:last-child td { border-bottom: 0; }
 .grid tbody td.sep-l { box-shadow: inset 1px 0 0 var(--line); }
 
-/* Larguras: tudo tem um minimo proprio e UMA coluna leva a sobra (.col-flex),
-   senao o navegador estica a ultima coluna de texto e trunca as outras. */
 .grid .col-idx   { width: 38px; }
 .grid .col-nome  { min-width: 164px; }
 .grid .col-money { min-width: 106px; }
 .grid .col-calc  { min-width: 112px; }
 .grid .col-txt   { min-width: 106px; }
-/* cargo cabe inteiro: "Coordenadora de Operacoes" e "Engenheira de Software"
-   sao os casos reais mais longos -- medido, nao chutado */
+
 .grid .col-cargo { min-width: 208px; }
 .grid .col-moeda { min-width: 92px; }
 .grid .col-enviar { min-width: 128px; }
 
-/* ---------------- moeda de pagamento ---------------- */
-
-/* cada moeda tem a sua cor, a mesma da tabela ao KPI, para bater de relance */
 .m-BRL { color: var(--ink); }
 .m-USD { color: var(--accent-hi); }
 .m-EUR { color: var(--blue); }
@@ -646,7 +653,6 @@ select.input { cursor: pointer; }
 .kpi-moeda.m-GBP::before { background: var(--violet); }
 .kpi-moeda.m-BRL::before { background: var(--ink-3); }
 
-/* seletor de moeda na linha: parece etiqueta, funciona como select */
 .moeda-sel {
   appearance: none; -webkit-appearance: none;
   font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .03em;
@@ -667,7 +673,6 @@ select.input { cursor: pointer; }
 .moeda-sel option { background: var(--surface-2); color: var(--ink); font-weight: 600; }
 .grid td.moeda { text-align: center; padding: 0 6px; }
 
-/* etiqueta so-leitura (tela do gestor) */
 .moeda-tag {
   display: inline-block;
   font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
@@ -675,7 +680,6 @@ select.input { cursor: pointer; }
   background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
-/* "a enviar" e o numero que importa: destacado, com o real logo abaixo */
 .grid td.enviar { padding: 7px 9px; text-align: right; white-space: nowrap; }
 .enviar-val { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .enviar-brl { font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
@@ -753,11 +757,6 @@ select.input { cursor: pointer; }
 .num { text-align: right; }
 tr.filtered-out { display: none; }
 
-/* ---------------- linha expansivel (detalhes) ----------------
-   A tabela mostra so o essencial, com folga. O resto abre numa faixa embaixo
-   da linha, em campos rotulados de tamanho decente -- e o que evita ter 18
-   colunas espremidas e texto cortado no meio. */
-
 .grid .col-exp { width: 34px; }
 .grid td.exp { text-align: center; padding: 0; }
 
@@ -806,8 +805,6 @@ tr.det-row.escondida { display: none; }
 }
 
 
-/* Limita a largura para o campo e a setinha de abrir ficarem juntos: numa celula
-   larga o link ficaria na esquerda e a seta perdida na outra ponta. */
 .wise-cell { display: flex; align-items: center; gap: 2px; padding-right: 5px; max-width: 250px; }
 .wise-cell .cell { flex: 1; min-width: 0; }
 .wise-link {
@@ -831,14 +828,14 @@ tr.det-row.escondida { display: none; }
 .pago-toggle.on:hover { background: #12362a; }
 .pago-toggle:disabled { cursor: not-allowed; opacity: .6; }
 
-/* estado vazio */
+.status-acoes { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; padding: 0 9px; position: relative; }
+
 .empty { margin: 0; padding: 46px 24px; text-align: center; color: var(--ink-3); }
 .empty-ico { font-size: 30px; display: block; margin-bottom: 12px; opacity: .55; }
 .empty strong { display: block; color: var(--ink); font-size: 14.5px; font-weight: 600; margin-bottom: 5px; }
 .empty p { margin: 0 auto 16px; max-width: 380px; font-size: 13px; color: var(--ink-3); }
 .empty .btn { margin: 0 3px; }
 
-/* esqueleto de carregamento */
 .skeleton { border-radius: var(--radius-xs); background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.3s ease infinite; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .sk-line { height: 12px; margin: 12px 16px; }
@@ -872,9 +869,6 @@ tr.det-row.escondida { display: none; }
 .sector-stat { line-height: 1.3; text-align: right; }
 .sector-stat .k { display: block; font-size: 10px; color: var(--ink-4); text-transform: uppercase; letter-spacing: .06em; font-weight: 650; margin-bottom: 1px; }
 .sector-stat .v { display: block; font-size: 13px; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
-/* varias moedas no mesmo campo: ficam uma embaixo da outra, alinhadas a direita,
-   em vez de estourar a largura e empurrar o rotulo */
-.sector-stat .v > span { display: block; }
 .sector-stat .sep-moeda { display: none; }
 .sector-stat .v.usd { color: var(--accent-hi); }
 .sector-actions { display: flex; gap: 6px; flex: none; }
@@ -919,7 +913,6 @@ tr.det-row.escondida { display: none; }
 }
 .select-inline:focus { outline: none; border-color: var(--accent-line); }
 
-/* caixa de senha gerada */
 .secret-box {
   display: flex; align-items: center; gap: 8px;
   background: var(--surface-3); border: 1px dashed var(--line-3);
@@ -1059,29 +1052,31 @@ tr.det-row.escondida { display: none; }
   .kpis { grid-template-columns: 1fr 1fr; }
   .kpi { padding: 12px 13px; }
   .kpi-value { font-size: 18px; }
-  .search { flex: 1 1 100%; order: 5; }
+  .search { flex: 1 1 100%; order: 5; margin-top: 4px; }
   .month-nav .month-label { min-width: 108px; font-size: 12.5px; }
   .card-head { padding: 12px 13px; }
   .sector-stats { width: 100%; margin-left: 0; justify-content: space-between; gap: 10px; }
   .sector-stat { text-align: left; }
   .modal { padding: 20px; }
   .foot { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .status-acoes { justify-content: flex-start; padding: 7px 9px; }
+}
+
+@media (max-width: 420px) {
+  .kpis { grid-template-columns: 1fr; }
+  .kpi-value { font-size: 22px; }
+  .sector-head { gap: 10px; }
+  .sector-name { font-size: 12.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 
-/* ============================================================
-   Impressao
-   ============================================================ */
 
 @media print {
   @page { size: A4 landscape; margin: 9mm; }
 
-  /* Redefine os tokens de cor na raiz -- todo componente que usa var(--surface) etc.
-     (kpi, card, sector-block, badges...) vira claro automaticamente, sem precisar
-     sobrescrever regra por regra. */
   :root {
     --bg: #ffffff;
     --bg-2: #ffffff;
@@ -1136,7 +1131,6 @@ tr.det-row.escondida { display: none; }
   .grid tbody td { background: #fff !important; }
   .grid tfoot td { background: var(--surface-3) !important; }
 
-  /* inputs viram texto simples -- sem borda, sem cinza de "desabilitado" */
   .cell {
     border: 0 !important; background: transparent !important;
     color: var(--ink) !important; -webkit-text-fill-color: var(--ink);
@@ -1144,7 +1138,6 @@ tr.det-row.escondida { display: none; }
   }
   .cell::-webkit-calendar-picker-indicator { display: none; }
 
-  /* botao de marcar pago vira so um rotulo, sem cara de botao clicavel */
   .pago-toggle { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--ink) !important; }
 
   tr { break-inside: avoid; }

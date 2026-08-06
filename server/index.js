@@ -1,5 +1,4 @@
 'use strict';
-/** Modo local: processo residente com listen + loop de cotacao. */
 const app = require('./app.js');
 const quote = require('./quote.js');
 

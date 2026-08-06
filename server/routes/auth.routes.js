@@ -43,7 +43,7 @@ router.post('/login', async (req, res, next) => {
 
   const row = await db.get(SELECT_LOGIN, [username]);
   if (!row || !row.active) {
-    auth.verifyDummy(password); // gasta o mesmo tempo de um scrypt real, nao denuncia username valido
+    auth.verifyDummy(password); 
     await auth.recordLoginFailure(key);
     return next(new HttpError(401, 'Usuario ou senha invalidos.'));
   }
@@ -66,7 +66,6 @@ router.post('/logout', requireAuth, async (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  // requireAuth ja rebuscou o usuario do banco (com sectorName) nesta requisicao
   res.json({ user: toPublicUser(req.user) });
 });
 
@@ -90,7 +89,6 @@ router.post('/change-password', requireAuth, async (req, res, next) => {
     [hash, salt, req.user.id]
   );
 
-  // gira a sessao: revoga todas e cria uma nova, ja com a troca de senha
   await auth.revokeAllSessionsForUser(req.user.id);
   const session = await auth.createSession(req.user.id, { ip: req.ip, userAgent: req.headers['user-agent'] });
   res.setHeader('Set-Cookie', auth.serializeSessionCookie(session.token, session.expiresAt));

@@ -1,5 +1,4 @@
 'use strict';
-/** Monta os CSVs de exportacao reusando shared/calc.js -- mesmas colunas da versao single-usuario. */
 const Calc = require('../shared/calc.js');
 
 function linha(valores) {

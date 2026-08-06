@@ -177,7 +177,6 @@ async function recordLoginFailure(key) {
        first_attempt = CASE WHEN ? - first_attempt > ? THEN ? ELSE first_attempt END`,
     [key, now, now, RATE_WINDOW_MS, now, RATE_WINDOW_MS, now]
   );
-  // poda oportunista de chaves antigas de outros IPs/usuarios
   await db.run('DELETE FROM login_attempts WHERE first_attempt < ?', [now - 2 * RATE_WINDOW_MS]);
 }
 

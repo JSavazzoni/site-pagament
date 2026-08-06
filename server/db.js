@@ -1,40 +1,18 @@
 'use strict';
-/**
- * Camada de acesso ao banco com DOIS backends atras da mesma interface async:
- *
- *  - Local (npm start / testes / seed sem env):  node:sqlite em arquivo,
- *    exatamente como antes. Sincrono por baixo, exposto como async.
- *  - Producao serverless (Vercel + Turso):       @libsql/client em modo HTTP
- *    (fetch puro, zero codigo nativo). Mesmo dialeto SQLite -- o schema e as
- *    queries validadas nao mudam.
- *
- * Por que async: no Vercel cada requisicao pode cair numa instancia nova, e o
- * unico armazenamento durvel e um banco remoto -- toda query vira uma chamada
- * de rede. A interface unica evita manter dois conjuntos de repos.
- *
- * Selecao de backend:
- *   TURSO_DATABASE_URL definida  -> Turso (com TURSO_AUTH_TOKEN)
- *   rodando no Vercel sem Turso  -> erro claro de configuracao (503 na API)
- *   caso contrario               -> arquivo local (DB_PATH ou data/app.db)
- */
+
 const fs = require('node:fs');
 const path = require('node:path');
 
 class DbNotConfiguredError extends Error {
   constructor() {
-    super('Banco de dados nao configurado. No Vercel, defina TURSO_DATABASE_URL e TURSO_AUTH_TOKEN (veja o README, secao "Deploy no Vercel").');
+    super('Banco de dados nao configurado.');
     this.name = 'DbNotConfiguredError';
   }
 }
 
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
-/**
- * O schema roda com CREATE TABLE IF NOT EXISTS, entao coluna nova nao chega em
- * banco que ja existe. Cada migracao e um ALTER idempotente: se a coluna ja
- * esta la o SQLite responde "duplicate column name" e a gente ignora.
- * Ordem importa -- sempre acrescente no fim.
- */
+
 const MIGRACOES = [
   'ALTER TABLE config_mes ADD COLUMN taxa_conversao_gbp REAL NOT NULL DEFAULT 6.5',
   'ALTER TABLE config_mes ADD COLUMN taxa_conversao_eur REAL NOT NULL DEFAULT 5.8',
@@ -44,8 +22,6 @@ const MIGRACOES = [
 function ehColunaDuplicada(err) {
   return /duplicate column name/i.test(String((err && err.message) || err));
 }
-
-/* ---------------- backend: node:sqlite (local) ---------------- */
 
 function createSqliteBackend() {
   const { DatabaseSync } = require('node:sqlite');
@@ -68,7 +44,6 @@ function createSqliteBackend() {
       const info = db.prepare(sql).run(...(params || []));
       return { lastInsertRowid: Number(info.lastInsertRowid), changes: Number(info.changes) };
     },
-    /** Local ja e sincrono: o ganho de agrupar e so na rede, mas a interface e a mesma. */
     async batch(comandos) {
       const saida = [];
       db.exec('BEGIN');
@@ -92,20 +67,15 @@ function createTursoBackend() {
   const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 
   let schemaReady = null;
-  /**
-   * Em serverless cada instancia fria repetia todo o DDL + migracoes antes de
-   * responder a primeira requisicao -- varias viagens de rede que o usuario
-   * esperava. Agora uma sondagem barata (1 viagem) confirma que o banco ja esta
-   * na forma esperada e pula o resto; o caminho completo so roda no banco novo.
-   */
+ 
   function ensureSchema() {
     if (!schemaReady) {
       schemaReady = (async () => {
         try {
           await client.execute('SELECT taxa_conversao_eur FROM config_mes LIMIT 1');
           await client.execute('SELECT moeda_pagamento FROM folha_itens LIMIT 1');
-          return; // schema e migracoes ja aplicados
-        } catch { /* banco novo ou desatualizado: segue para o caminho completo */ }
+          return; 
+        } catch { }
 
         await client.executeMultiple(fs.readFileSync(SCHEMA_PATH, 'utf8'));
         for (const sql of MIGRACOES) {
@@ -140,11 +110,7 @@ function createTursoBackend() {
         changes: rs.rowsAffected != null ? Number(rs.rowsAffected) : 0
       };
     },
-    /**
-     * Varios comandos numa UNICA viagem de rede, em transacao. Faz toda a
-     * diferenca aqui: cada execute() solto e um HTTP separado para o Turso
-     * (~90ms), entao copiar 12 colaboradores em 12 execute() custava ~1s.
-     */
+
     async batch(comandos) {
       const rss = await client.batch(
         comandos.map((c) => ({ sql: c.sql, args: c.args || [] })),
@@ -166,14 +132,12 @@ function pickBackend() {
   return createSqliteBackend();
 }
 
-/** Garante backend escolhido e schema criado. Memoizado -- barato chamar em toda requisicao. */
 function init() {
   if (!initPromise) {
     initPromise = (async () => {
       backend = pickBackend();
       if (backend.ensureSchema) await backend.ensureSchema();
     })().catch((err) => {
-      // falhou (ex.: rede) -- permite tentar de novo na proxima requisicao
       initPromise = null;
       backend = null;
       throw err;

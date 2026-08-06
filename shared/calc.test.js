@@ -62,7 +62,6 @@ test('libra converte pela propria taxa, independente do dolar', () => {
   assert.ok(close(r.feeGbp, 8.08), 'taxa Wise de 1% sobre a libra');
   assert.ok(close(r.totalGbp, 816.08), 'total em libra com taxa');
 
-  // trocar so a taxa da libra nao pode mexer no dolar (e vice-versa)
   const r2 = Calc.calcItem(it, { ...config, taxaConversaoGbp: 6.5 });
   assert.ok(close(r2.dolar, 1010), 'dolar intocado ao mudar a taxa da libra');
   assert.ok(close(r2.libra, 5050 / 6.5, 0.01), 'libra segue a taxa nova');
@@ -70,7 +69,6 @@ test('libra converte pela propria taxa, independente do dolar', () => {
   const r3 = Calc.calcItem(it, { ...config, taxaConversao: 5.5 });
   assert.ok(close(r3.libra, 808), 'libra intocada ao mudar a taxa do dolar');
 
-  // sem taxa da libra configurada, o valor e 0 -- nunca herda o do dolar
   const semGbp = Calc.calcItem(it, { diasUteis: 22, taxaWisePct: 1, taxaConversao: 5 });
   assert.equal(semGbp.libra, 0, 'sem taxa da libra o resultado e zero');
   assert.ok(close(semGbp.dolar, 1010), 'dolar continua valendo');
@@ -97,16 +95,13 @@ test('moeda de pagamento define o "a enviar" e o equivalente em real', () => {
   assert.ok(close(emGbp.aEnviar, 816.08), 'GBP: 5050/6,25 + 1%');
   assert.ok(close(emGbp.equivaleBrl, 5100.50), 'GBP: mesmo custo em real');
 
-  // em real nao ha conversao, logo nao ha taxa Wise
   const emBrl = Calc.calcItem({ ...base, moedaPagamento: 'BRL' }, config);
   assert.ok(close(emBrl.aEnviar, 5050), 'BRL: manda o total, sem taxa');
   assert.ok(close(emBrl.equivaleBrl, 5050), 'BRL: custa exatamente o total');
 
-  // moeda ausente ou invalida cai em USD, nunca quebra
   assert.equal(Calc.calcItem(base, config).moeda, 'USD');
   assert.equal(Calc.calcItem({ ...base, moedaPagamento: 'XYZ' }, config).moeda, 'USD');
 
-  // as 3 conversoes continuam disponiveis, independentes entre si
   assert.ok(close(emUsd.dolar, 1010) && close(emUsd.euro, 841.67, 0.01) && close(emUsd.libra, 808),
     'as tres moedas convertem do mesmo total, cada uma pela sua taxa');
 });
@@ -125,7 +120,6 @@ test('calcTotais separa por moeda de pagamento', () => {
   assert.ok(close(t.porMoeda.BRL.aEnviar, 5050), 'em real, sem taxa');
 
   assert.ok(close(t.total, 25250), 'folha total em real');
-  // 4 pessoas pagam 1% de taxa, 1 (em real) nao paga
   assert.ok(close(t.equivaleBrl, 25250 + 4 * 50.50), 'custo real = folha + taxa so de quem converte');
 
   const vazio = Calc.calcTotais([], config);

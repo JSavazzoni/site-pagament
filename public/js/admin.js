@@ -232,7 +232,6 @@
      Criacao
      ============================================================ */
 
-  /** Sugere o login a partir do nome, enquanto a CCO ainda nao digitou um. */
   function sugerirUsername(nome) {
     return String(nome || '').trim().toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -345,7 +344,6 @@
       });
     });
 
-    // botoes "Cancelar"/"Pronto" de qualquer modal
     App.$all('[data-fechar]').forEach(function (b) {
       b.addEventListener('click', function () { App.closeModal(b.getAttribute('data-fechar')); });
     });

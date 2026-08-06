@@ -10,14 +10,12 @@ function toPublic(row) {
     taxaWisePct: row.taxa_wise_pct,
     taxaConversao: row.taxa_conversao,
     taxaConversaoEur: row.taxa_conversao_eur != null ? row.taxa_conversao_eur : DEFAULTS.taxaConversaoEur,
-    // bancos criados antes da libra podem nao ter a coluna preenchida
     taxaConversaoGbp: row.taxa_conversao_gbp != null ? row.taxa_conversao_gbp : DEFAULTS.taxaConversaoGbp,
     taxaConversaoAuto: !!row.taxa_conversao_auto,
     updatedAt: row.updated_at
   };
 }
 
-/** Garante que a competencia tem uma linha (auto-vivify com defaults). */
 async function ensure(competencia) {
   let row = await db.get('SELECT * FROM config_mes WHERE competencia = ?', [competencia]);
   if (!row) {
@@ -26,7 +24,7 @@ async function ensure(competencia) {
          (competencia, dias_uteis, taxa_wise_pct, taxa_conversao, taxa_conversao_eur, taxa_conversao_gbp, taxa_conversao_auto)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [competencia, DEFAULTS.diasUteis, DEFAULTS.taxaWisePct, DEFAULTS.taxaConversao,
-        DEFAULTS.taxaConversaoGbp, DEFAULTS.taxaConversaoAuto]
+        DEFAULTS.taxaConversaoEur, DEFAULTS.taxaConversaoGbp, DEFAULTS.taxaConversaoAuto]
     );
     row = await db.get('SELECT * FROM config_mes WHERE competencia = ?', [competencia]);
   }
@@ -57,11 +55,6 @@ async function update(competencia, patch, updatedBy) {
   return get(competencia);
 }
 
-/**
- * Aplica a cotacao ao vivo em toda competencia marcada como auto-sync.
- * Uma taxa indisponivel no provedor nao pode zerar a que ja esta gravada --
- * por isso cada moeda so entra no UPDATE se veio um numero valido.
- */
 async function syncAutoRates(usdRate, eurRate, gbpRate) {
   const sets = [];
   const args = [];

@@ -1,16 +1,5 @@
 'use strict';
-/**
- * CLI de emergencia para redefinir a senha de qualquer usuario (inclusive a
- * propria CCO) sem passar pela UI -- nao ha recuperacao por e-mail.
- *
- * Funciona contra o banco LOCAL (padrao) ou contra o TURSO DE PRODUCAO --
- * basta exportar TURSO_DATABASE_URL e TURSO_AUTH_TOKEN antes de rodar.
- *
- * Uso:
- *   node scripts/reset-password.js <username> [nova-senha]
- *
- * Sem [nova-senha], gera uma senha aleatoria forte e imprime uma vez.
- */
+
 const crypto = require('node:crypto');
 const db = require('../server/db.js');
 const auth = require('../server/auth.js');

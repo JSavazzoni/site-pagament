@@ -1,14 +1,5 @@
 'use strict';
-/**
- * Cotacao ao vivo no servidor (AwesomeAPI + fallback exchangerate-api).
- * Cache em memoria (~5 min) por instancia.
- *
- * Serverless nao tem processo residente, entao NAO ha setInterval em producao:
- * o sync das competencias marcadas como "taxa automatica" acontece de forma
- * LAZY -- toda vez que uma cotacao fresca e buscada (o painel da CCO chama
- * /api/quote ao abrir e a cada 5 min), ela e aplicada no config_mes.
- * O setInterval so existe no modo local (chamado por server/index.js).
- */
+
 const configRepo = require('./repo/config.repo.js');
 
 const CACHE_MS = 5 * 60 * 1000;
@@ -38,7 +29,6 @@ async function fetchLive() {
       source: 'AwesomeAPI'
     };
   } catch {
-    // Fallback devolve USD como base: BRL por libra = (BRL/USD) / (GBP/USD).
     const d = await fetchTimeout('https://open.er-api.com/v6/latest/USD');
     if (!d.rates || !d.rates.BRL) throw new Error('resposta inesperada da exchangerate-api');
     return {
@@ -60,19 +50,17 @@ async function getQuote(force) {
   try {
     const data = await fetchLive();
     cache = { data, at: Date.now() };
-    // sync lazy: aplica em toda competencia com taxa automatica ligada.
-    // Nao pode derrubar a requisicao da cotacao se o banco falhar.
+
     try { await configRepo.syncAutoRates(data.usd, data.eur, data.gbp); } catch (err) {
       console.error('Falha ao aplicar cotacao automatica:', err.message);
     }
     return data;
   } catch (err) {
-    if (cache.data) return cache.data; // serve algo desatualizado em vez de derrubar a requisicao
+    if (cache.data) return cache.data; 
     throw err;
   }
 }
 
-/** Loop periodico -- so para o modo local (processo residente). */
 function startAutoSync(intervalMs) {
   getQuote(false).catch(() => {});
   const timer = setInterval(() => { getQuote(true).catch(() => {}); }, intervalMs || 10 * 60 * 1000);

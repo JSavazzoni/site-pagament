@@ -15,13 +15,11 @@ function withCalc(item, config) {
   return { ...item, ...payrollRepo.calcRow(item, config) };
 }
 
-/** Gestor: sempre o proprio setor. CCO: le de onde a chamada indicar (query ou body). */
 function sectorIdFor(req, raw) {
   if (req.user.role === 'gestor') return req.user.sectorId;
   return raw != null && raw !== '' ? Number(raw) : null;
 }
 
-/** Carrega o item e confere posse; gestor de outro setor recebe 404 (nao 403 -- nao confirma existencia). */
 async function loadOwnedItem(req) {
   const id = Number(req.params.id);
   const item = await payrollRepo.getById(id);
@@ -35,7 +33,6 @@ async function loadOwnedItem(req) {
 router.get('/summary', requireAuth, requireRole('cco'), async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
-  // as duas leituras nao dependem uma da outra: em serie eram 2 viagens de rede
   const [config, linhas] = await Promise.all([
     configRepo.get(competencia),
     payrollRepo.summaryRows(competencia)
@@ -119,8 +116,6 @@ router.post('/import', requireAuth, async (req, res, next) => {
   }
   if (idxCab === -1) return next(badRequest('Nao encontrei a coluna "Nome" no arquivo.'));
 
-  // Monta tudo antes e grava numa unica transacao: um CSV de 200 linhas eram
-  // 200 viagens de rede em serie, e uma falha no meio deixava metade importada.
   const comandos = [];
   if (req.query.replace === '1') {
     const atuais = await payrollRepo.listBySector(sectorId, competencia);
@@ -184,8 +179,6 @@ router.get('/', requireAuth, async (req, res, next) => {
   const sectorId = sectorIdFor(req, req.query.sectorId);
   if (!sectorId) return next(badRequest('Informe sectorId.'));
 
-  // as 3 leituras sao independentes; em serie eram 3 viagens de rede. Se o setor
-  // nao existir, os itens vem vazios de qualquer jeito -- nada vaza.
   const [sector, config, brutos] = await Promise.all([
     sectorsRepo.getById(sectorId),
     configRepo.get(competencia),
@@ -211,8 +204,6 @@ router.post('/', requireAuth, async (req, res, next) => {
   if (!sectorId) return next(badRequest('Informe sectorId.'));
   if (!(await sectorsRepo.getById(sectorId))) return next(badRequest('Setor informado nao existe.'));
 
-  // nome pode ficar vazio na criacao -- interacao e estilo planilha: "+ Colaborador"
-  // cria a linha na hora e o usuario preenche o nome depois.
   const nome = String(body.nome || '').trim();
 
   const created = await payrollRepo.create({
@@ -226,7 +217,6 @@ router.post('/', requireAuth, async (req, res, next) => {
   res.status(201).json(withCalc(created, config));
 });
 
-/** Marca/desmarca varios lancamentos numa unica requisicao (botao "pagar setor inteiro"). */
 router.patch('/pago-lote', requireAuth, requireRole('cco'), async (req, res, next) => {
   const body = req.body || {};
   const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter(Number.isInteger) : [];
@@ -237,7 +227,6 @@ router.patch('/pago-lote', requireAuth, requireRole('cco'), async (req, res, nex
   const atualizados = await payrollRepo.setPagoEmLote(ids, pago);
   if (!atualizados.length) return next(notFound('Nenhum lancamento encontrado.'));
 
-  // todos da mesma competencia na pratica; busca a config de cada uma so uma vez
   const competencias = [...new Set(atualizados.map((it) => it.competencia))];
   const configs = Object.fromEntries(
     await Promise.all(competencias.map(async (c) => [c, await configRepo.get(c)]))
@@ -254,7 +243,6 @@ router.patch('/:id/pago', requireAuth, requireRole('cco'), async (req, res, next
   const item = await payrollRepo.getById(id);
   if (!item) return next(notFound('Lancamento nao encontrado.'));
 
-  // a gravacao e a leitura da config sao independentes -- vao juntas
   const [updated, config] = await Promise.all([
     payrollRepo.setPago(id, !!(req.body && req.body.pago)),
     configRepo.get(item.competencia)

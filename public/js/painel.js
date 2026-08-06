@@ -8,16 +8,14 @@
     config: null,
     summary: null,
     quote: null,
-    fechados: {},     // setores recolhidos pelo usuario
-    abertos: {},      // linhas com o painel de detalhes aberto
+    fechados: {},    
+    abertos: {},     
     busca: '',
     carregando: false
   };
   var monthNav = null;
   var saveTimers = {};
   var pendingPatches = {};
-
-  // colunas visiveis na linha principal (usado no colspan do painel de detalhes)
   var COLUNAS = 12;
 
   /* ============================================================
@@ -56,9 +54,6 @@
     box.classList.add('is-busy');
     state.carregando = true;
 
-    // A cotacao e informativa (o chip e o KPI de custo real): pedir junto, mas
-    // NAO esperar por ela para pintar a folha -- ela vinha de uma API externa e
-    // segurava a tela inteira quando estava lenta.
     carregarQuote().then(function () {
       if (state.summary) renderKpis();
     });
@@ -71,9 +66,7 @@
       state.summary = r[1];
       renderConfig();
       renderSetores();
-      // renderSetores() so escreve os totais que ja vieram do servidor; as celulas
-      // calculadas de CADA LINHA ficam no placeholder do template ate esta chamada.
-      recalcTudoLocal();
+
       aplicarBusca();
     }).catch(function (e) {
       App.toast(e.message, 'err');
@@ -170,10 +163,6 @@
     return state.summary.sectors.reduce(function (a, s) { return a.concat(s.itens); }, []);
   }
 
-  /**
-   * Um cartao por moeda EM USO: o valor a enviar naquela moeda e, logo abaixo,
-   * quanto isso custa em real. Moeda sem ninguem nao vira cartao vazio.
-   */
   function renderKpisMoeda() {
     var box = App.$('#kpis-moeda');
     var t = state.summary.geral;
@@ -236,7 +225,6 @@
               statusSetor(pagos, sec.itens.length) +
             '</span>' +
             '<div class="sector-stats">' +
-              // o detalhamento por moeda fica no rodape da tabela, onde cabe com folga
               '<span class="sector-stat"><span class="k">Folha</span><span class="v" data-sub="total">' + Calc.brl(sec.totals.total) + '</span></span>' +
               '<span class="sector-stat"><span class="k">Custo c/ taxas</span><span class="v" data-sub="custo">' + Calc.brl(sec.totals.equivaleBrl) + '</span></span>' +
             '</div>' +
@@ -280,7 +268,6 @@
       '</tr></thead>';
   }
 
-  /** Rodape: uma linha por moeda usada no setor, cada uma com o total em real. */
   function rodape(t) {
     var moedas = Calc.moedasEmUso(t);
     var linhas = moedas.map(function (m) {
@@ -305,7 +292,6 @@
       '</tr></tfoot>';
   }
 
-  /** Devolve as DUAS linhas de um item: a principal e o painel de detalhes. */
   function linhas(it, i) {
     var aberta = !!state.abertos[it.id];
     return linhaPrincipal(it, i, aberta) + linhaDetalhe(it, aberta);
@@ -327,17 +313,18 @@
       '<td class="enviar" data-c-enviar>' +
         '<div class="enviar-val m-' + Calc.moedaDe(it) + '">&mdash;</div>' +
         '<div class="enviar-brl">&mdash;</div>' +
+        '<div class="enviar-alt" data-c-enviar-alt></div>' +
       '</td>' +
-      '<td class="sep-l"><button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
-        (it.pago ? App.ico('check', 13) + ' Pago' : 'Marcar pago') + '</button></td>' +
+      '<td class="sep-l"><div class="status-acoes">' +
+        '<button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
+          (it.pago ? App.ico('check', 13) + ' Pago' : 'Marcar pago') + '</button>' +
+        '<a class="btn-wise" data-wise-pagar href="https://wise.com" target="_blank" rel="noopener" title="Pagar com Wise em nova aba">' +
+          App.ico('abrir', 12) + ' Wise</a>' +
+      '</div></td>' +
       '<td class="acao"><button class="btn-icon danger" data-del type="button" title="Remover" aria-label="Remover">&times;</button></td>' +
       '</tr>';
   }
 
-  /**
-   * Painel de detalhes: tudo o que nao cabe com folga na linha principal.
-   * Campos rotulados e de tamanho normal -- nada truncado.
-   */
   function linhaDetalhe(it, aberta) {
     var d = it.pago ? ' disabled' : '';
     var href = Calc.wiseHref(it.wiseLink);
@@ -370,8 +357,8 @@
             '<input class="input" type="date" data-f="data" value="' + esc(it.data) + '"' + d + '></div>' +
           '<div class="det-field" style="grid-column:span 2;"><span>Link do Wise</span><div class="det-wise">' +
             '<input class="input" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
-            '<a class="btn btn-sm" data-wise-abrir target="_blank" rel="noopener"' +
-              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 13) + ' Abrir</a>' +
+            '<a class="btn-wise" data-wise-abrir target="_blank" rel="noopener"' +
+              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 12) + ' Abrir</a>' +
           '</div></div>' +
           campoTexto('obs', 'Observações', it.obs, d, 'Anotação livre') +
         '</div>' +
@@ -379,7 +366,6 @@
       '</div></td></tr>';
   }
 
-  /** Escolha da moeda em que a pessoa recebe -- e daqui que sai o "a enviar". */
   function seletorMoeda(it) {
     var atual = Calc.moedaDe(it);
     var opcoes = Calc.CODIGOS_MOEDA.map(function (m) {
@@ -437,13 +423,17 @@
       escreve(tr, 'total', Calc.brl(r.total));
       escreve(tr, 'diario', Calc.brl(r.diario));
 
-      // o que a CCO manda, na moeda escolhida, e quanto isso custa em real
       var cel = tr.querySelector('[data-c-enviar]');
       if (cel) {
         var val = cel.querySelector('.enviar-val');
         val.className = 'enviar-val m-' + r.moeda;
         val.textContent = Calc.fmtMoeda(r.moeda, r.aEnviar);
         cel.querySelector('.enviar-brl').textContent = '= ' + Calc.brl(r.equivaleBrl);
+        var alt = cel.querySelector('[data-c-enviar-alt]');
+        if (alt) {
+          alt.textContent = r.moeda === 'USD' ? Calc.gbp(r.libra) : '';
+          alt.style.display = r.moeda === 'USD' ? 'block' : 'none';
+        }
       }
       var sel = tr.querySelector('[data-f="moedaPagamento"]');
       if (sel) sel.className = 'moeda-sel m-' + r.moeda;
@@ -467,8 +457,6 @@
     escreveTf(tabela, 'diario', Calc.brl(t.diario));
     escreveTf(tabela, 'equivaleBrl', Calc.brl(t.equivaleBrl) + ' com taxas');
 
-    // as linhas do rodape por moeda mudam de conjunto quando alguem troca de
-    // moeda -- redesenha o tfoot inteiro em vez de tentar remendar celula a celula
     var tfoot = tabela.querySelector('tfoot');
     if (tfoot) {
       var novo = rodape(t);
@@ -487,7 +475,6 @@
     }
   }
 
-  /** "$1.234,56 · €890,00" -- so as moedas que o setor realmente usa. */
   function resumoMoedas(t) {
     var moedas = Calc.moedasEmUso(t);
     if (!moedas.length) return '<span class="v">&mdash;</span>';
@@ -509,7 +496,6 @@
      Edicao
      ============================================================ */
 
-  /** Patch ACUMULA entre chamadas: editar 2 campos dentro dos 500ms nao perde o 1o. */
   function salvarItem(id, campo, valor) {
     var patch = pendingPatches[id] || (pendingPatches[id] = {});
     patch[campo] = valor;
@@ -521,7 +507,6 @@
     }, 500);
   }
 
-  /** Sobe do campo editado (na linha ou no painel de detalhes) ate o id do item. */
   function idDoCampo(inp) {
     var tr = inp.closest('tr');
     if (!tr) return null;
@@ -531,8 +516,6 @@
   function bindTabela() {
     var box = App.$('#setores-container');
 
-    // `.moeda-sel` precisa entrar aqui: e um <select>, nao casava com .cell e a
-    // troca de moeda nao chegava a ser salva.
     box.addEventListener('input', function (e) {
       var inp = e.target.closest('.cell, .det-field .input, .moeda-sel');
       if (!inp || !inp.dataset.f) return;
@@ -563,7 +546,6 @@
       inp.value = v ? Calc.num(v) : '';
     });
 
-    // Enter desce para a mesma coluna da linha seguinte (so na grade principal)
     box.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       var inp = e.target.closest('.cell');
@@ -631,20 +613,24 @@
     var found = acharItem(id);
     if (!found) return;
 
+    var container = btn.closest('.status-acoes');
+    if (container) container.classList.add('is-loading');
     btn.disabled = true;
+
     App.patch('/api/payroll/' + id + '/pago', { pago: !found.item.pago }).then(function (upd) {
       found.item.pago = upd.pago;
       found.item.pagoEm = upd.pagoEm;
       renderSetores();
       recalcTudoLocal();
       aplicarBusca();
+      App.toast(upd.pago ? 'Pagamento confirmado.' : 'Pagamento desmarcado.', 'ok');
     }).catch(function (e) {
+      if (container) container.classList.remove('is-loading');
       btn.disabled = false;
       App.toast(e.message, 'err');
     });
   }
 
-  /** Marca (ou desmarca) o setor inteiro de uma vez -- evita 30 cliques no fim do mes. */
   function marcarSetor(btn) {
     var bloco = btn.closest('.sector-block');
     var sec = state.summary.sectors.filter(function (s) {
@@ -666,10 +652,10 @@
     }).then(function (sim) {
       if (!sim) return;
       btn.disabled = true;
+      btn.classList.add('is-loading');
+      var textoOriginal = btn.textContent;
       btn.textContent = 'Salvando...';
 
-      // uma requisicao so para o setor inteiro (era um PATCH por colaborador,
-      // em serie -- 12 pessoas eram 12 idas ao servidor)
       App.patch('/api/payroll/pago-lote', {
         ids: alvos.map(function (it) { return it.id; }),
         pago: marcar
@@ -687,6 +673,10 @@
       }).catch(function (e) {
         App.toast(e.message, 'err');
         carregarTudo();
+      }).then(function () {
+        btn.disabled = false;
+        btn.classList.remove('is-loading');
+        btn.textContent = textoOriginal;
       });
     });
   }
@@ -730,7 +720,6 @@
       App.$all('tbody tr[data-id]', bloco).forEach(function (tr) {
         var bate = !termo || (tr.dataset.busca || '').indexOf(termo) !== -1;
         tr.classList.toggle('filtered-out', !bate);
-        // o painel de detalhes acompanha a linha dona dele
         var det = bloco.querySelector('tr[data-det="' + tr.dataset.id + '"]');
         if (det) det.classList.toggle('filtered-out', !bate);
         if (bate) achouNoBloco++;
@@ -758,7 +747,6 @@
       carregarTudo();
     });
 
-    // parametros do mes (recolhivel)
     var params = App.$('#params');
     function alternarParams() {
       var aberto = params.classList.toggle('open');
@@ -769,12 +757,6 @@
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternarParams(); }
     });
 
-    /**
-     * O change dos campos de configuracao so vale quando NAO ha carregamento em
-     * curso: trocar de competencia com o campo focado dispara o change com o valor
-     * do mes que saiu e gravaria esse numero no mes novo. Em duvida, renderConfig()
-     * repoe o valor verdadeiro na tela.
-     */
     function mudouConfig(fn) {
       return function (e) {
         if (state.carregando || !state.config) { renderConfig(); return; }
@@ -812,8 +794,7 @@
       if (e.target.checked && state.quote) {
         if (state.quote.usd > 0) patch.taxaConversao = state.quote.usd;
         if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
-        if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
-      if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
+        if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
       }
       salvarConfig(patch);
     }));
@@ -871,7 +852,6 @@
 
     App.$('#btn-ir-admin').addEventListener('click', function () { location.href = '/admin'; });
 
-    // "/" foca a busca
     document.addEventListener('keydown', function (e) {
       if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
       var t = e.target;

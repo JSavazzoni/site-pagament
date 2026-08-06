@@ -9,12 +9,10 @@
   App.ligarPwToggles();
   App.pintarIcones();
 
-  // ja logado? pula direto pro dashboard certo
   App.get('/api/auth/me').then(function (data) {
     location.replace(data.user.role === 'cco' ? '/painel' : '/setor');
-  }).catch(function () { /* sem sessao -- fica na tela de login */ });
+  }).catch(function () {  });
 
-  // Caps Lock ligado e a causa mais comum de "minha senha nao funciona".
   function checarCaps(e) {
     if (typeof e.getModifierState !== 'function') return;
     caps.classList.toggle('show', e.getModifierState('CapsLock'));
