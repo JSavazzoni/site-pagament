@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Geral — Folha de Pagamento</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💵</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/painel.html">
+      <span class="brand-mark">R$→$</span>
+      <div>
+        <h1>Painel Geral</h1>
+        <p class="brand-sub" id="brand-sub">—</p>
+      </div>
+    </a>
+    <nav class="topbar-nav">
+      <a href="/painel.html" class="active">Painel</a>
+      <a href="/admin.html">Administração</a>
+    </nav>
+    <div class="topbar-user">
+      <button class="btn btn-ghost btn-sm" id="btn-senha" type="button">Trocar senha</button>
+      <div class="user-chip">
+        <span class="name" id="user-name">—</span>
+        <span class="role" id="user-role">CCO</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">Sair</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="panel" aria-label="Competencia, cotacao e parametros do mes">
+    <div class="panel-grid">
+
+      <div class="field">
+        <label for="competencia">Competência</label>
+        <input type="month" id="competencia" class="input">
+        <small class="hint" id="hint-competencia">Cada mês guarda sua própria folha.</small>
+      </div>
+
+      <div class="field">
+        <label for="taxa-conversao">Taxa de conversão (R$ por US$ 1)</label>
+        <div class="field-row">
+          <input type="text" id="taxa-conversao" class="input input-num" inputmode="decimal">
+          <button class="btn btn-ghost btn-sm" id="btn-usar-cotacao" type="button">Usar cotação</button>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="auto-cotacao">
+          <span>Sincronizar com a cotação ao vivo</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="dias-uteis">Dias úteis no mês</label>
+        <input type="number" id="dias-uteis" class="input input-num" min="1" max="31" step="1">
+      </div>
+
+      <div class="field">
+        <label for="taxa-wise">Taxa Wise (%)</label>
+        <input type="text" id="taxa-wise" class="input input-num" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>Cotação de mercado agora</label>
+        <div class="field-row">
+          <span class="badge badge-accent" id="cotacao-usd" style="font-size:13px;padding:8px 12px;">US$ 1 = R$ —</span>
+          <button class="btn btn-ghost btn-sm" id="btn-refresh" type="button" title="Atualizar cotação">
+            <span class="ico-refresh" aria-hidden="true">↻</span>
+          </button>
+        </div>
+        <small class="hint" id="cotacao-time">Buscando cotação…</small>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Resumo geral">
+    <div class="kpi">
+      <span class="kpi-label">Colaboradores</span>
+      <strong class="kpi-value" id="kpi-qtd">0</strong>
+      <span class="kpi-foot" id="kpi-setores">0 setores</span>
+    </div>
+    <div class="kpi kpi-blue">
+      <span class="kpi-label">Total geral (R$)</span>
+      <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-custo-diario">Custo diário: R$ 0,00</span>
+    </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">Total em dólar</span>
+      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
+      <span class="kpi-foot" id="kpi-total-usd-taxas">c/ taxas: $0.00</span>
+    </div>
+    <div class="kpi kpi-amber">
+      <span class="kpi-label">Custo real na cotação de hoje</span>
+      <strong class="kpi-value" id="kpi-custo-real">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-diferenca">—</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Pagamentos feitos</span>
+      <strong class="kpi-value" id="kpi-pago">0 de 0</strong>
+      <span class="kpi-foot" id="kpi-pago-valor">R$ 0,00</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Folha por setor</h2>
+      <div class="card-actions">
+        <button class="btn" id="btn-export-csv" type="button">Exportar CSV (todos)</button>
+        <button class="btn" id="btn-export-wise" type="button">Lista de pagamento Wise</button>
+        <button class="btn" id="btn-print" type="button">Imprimir / PDF</button>
+      </div>
+    </div>
+    <div id="setores-container"></div>
+    <p class="empty" id="empty-geral" hidden>Nenhum setor com colaboradores nesta competência ainda.</p>
+  </section>
+
+  <footer class="foot">
+    <p>Marque um lançamento como <strong>pago</strong> depois de enviar o Wise. Itens pagos ficam travados para os gestores.</p>
+  </footer>
+
+</main>
+
+<div class="modal-backdrop" id="modal-senha">
+  <div class="modal">
+    <h3>Trocar senha</h3>
+    <p class="hint">Sua senha atual e a nova senha, com pelo menos 8 caracteres.</p>
+    <form class="modal-form" id="form-senha">
+      <div class="field">
+        <label for="senha-atual">Senha atual</label>
+        <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="senha-nova">Nova senha</label>
+        <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <p class="error-text" id="senha-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="btn-senha-cancelar">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/shared/calc.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/painel.js"></script>
+</body>
+</html>

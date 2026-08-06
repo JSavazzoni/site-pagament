@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Setor — Folha de Pagamento</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💵</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/setor.html">
+      <span class="brand-mark">R$→$</span>
+      <div>
+        <h1>Meu Setor</h1>
+        <p class="brand-sub" id="brand-sub">—</p>
+      </div>
+    </a>
+    <div class="topbar-user">
+      <button class="btn btn-ghost btn-sm" id="btn-senha" type="button">Trocar senha</button>
+      <div class="user-chip">
+        <span class="name" id="user-name">—</span>
+        <span class="role" id="user-role">—</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">Sair</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="panel" aria-label="Competencia e parametros do mes">
+    <div class="panel-grid">
+      <div class="field">
+        <label for="competencia">Competência</label>
+        <div class="field-row">
+          <input type="month" id="competencia" class="input">
+          <button class="btn btn-ghost btn-sm" id="btn-copiar-mes" type="button">Copiar mês anterior</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Taxa de conversão <span class="hint">(definida pela CCO)</span></label>
+        <input class="input" id="taxa-conversao" disabled>
+      </div>
+      <div class="field">
+        <label>Dias úteis no mês</label>
+        <input class="input" id="dias-uteis" disabled>
+      </div>
+      <div class="field">
+        <label>Taxa Wise</label>
+        <input class="input" id="taxa-wise" disabled>
+      </div>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Resumo do setor">
+    <div class="kpi">
+      <span class="kpi-label">Colaboradores</span>
+      <strong class="kpi-value" id="kpi-qtd">0</strong>
+    </div>
+    <div class="kpi kpi-blue">
+      <span class="kpi-label">Total do setor</span>
+      <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-custo-diario">Custo diário: R$ 0,00</span>
+    </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">Total em dólar</span>
+      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
+      <span class="kpi-foot" id="kpi-taxa-usada">—</span>
+    </div>
+    <div class="kpi kpi-amber">
+      <span class="kpi-label">Já pago</span>
+      <strong class="kpi-value" id="kpi-pago">0 de 0</strong>
+      <span class="kpi-foot" id="kpi-pago-valor">R$ 0,00</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Folha do setor</h2>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-add" type="button">+ Colaborador</button>
+        <button class="btn" id="btn-export-csv" type="button">Exportar CSV</button>
+        <button class="btn" id="btn-import-csv" type="button">Importar CSV</button>
+        <button class="btn" id="btn-print" type="button">Imprimir / PDF</button>
+        <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="grid" id="tabela-folha">
+        <thead>
+          <tr>
+            <th class="col-idx" scope="col">#</th>
+            <th class="col-nome" scope="col">Nome</th>
+            <th class="num" scope="col">Salário base</th>
+            <th class="num" scope="col">Comissão</th>
+            <th class="num" scope="col">Aluguel / Outros</th>
+            <th class="num" scope="col">Bonificação</th>
+            <th class="num calc" scope="col">Total</th>
+            <th class="num calc" scope="col">Custo diário</th>
+            <th scope="col">Cidade</th>
+            <th scope="col">Cargo</th>
+            <th scope="col">Data</th>
+            <th class="col-obs" scope="col">OBS</th>
+            <th scope="col">Wise</th>
+            <th scope="col">Status</th>
+            <th class="col-acao" scope="col"><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-folha"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="total-label">Total</td>
+            <td class="num" id="t-salario">R$ 0,00</td>
+            <td class="num" id="t-comissao">R$ 0,00</td>
+            <td class="num" id="t-aluguel">R$ 0,00</td>
+            <td class="num" id="t-bonificacao">R$ 0,00</td>
+            <td class="num calc" id="t-total">R$ 0,00</td>
+            <td class="num calc" id="t-diario">R$ 0,00</td>
+            <td colspan="6"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <p class="empty" id="empty-folha" hidden>
+      Nenhum colaborador ainda. Clique em <strong>+ Colaborador</strong> para começar.
+    </p>
+  </section>
+
+  <footer class="foot">
+    <p>A cotação e as taxas do mês são definidas pela CCO. Os valores em dólar são calculados automaticamente.</p>
+  </footer>
+
+</main>
+
+<div class="modal-backdrop" id="modal-senha">
+  <div class="modal">
+    <h3>Trocar senha</h3>
+    <p class="hint">Sua senha atual e a nova senha, com pelo menos 8 caracteres.</p>
+    <form class="modal-form" id="form-senha">
+      <div class="field">
+        <label for="senha-atual">Senha atual</label>
+        <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="senha-nova">Nova senha</label>
+        <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <p class="error-text" id="senha-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="btn-senha-cancelar">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/shared/calc.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/setor.js"></script>
+</body>
+</html>

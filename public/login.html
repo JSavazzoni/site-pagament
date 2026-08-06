@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Folha de Pagamento</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💵</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<div class="login-shell">
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="brand-mark">R$→$</span>
+      <h1>Folha de Pagamento</h1>
+      <p>Entre com seu usuário e senha</p>
+    </div>
+
+    <form class="login-form" id="form-login" autocomplete="on">
+      <div class="field">
+        <label for="username">Usuário</label>
+        <input class="input" id="username" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Senha</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <p class="error-text" id="login-error" role="alert"></p>
+      <button class="btn btn-primary btn-block" type="submit" id="btn-entrar">Entrar</button>
+    </form>
+
+    <p class="login-foot">Acesso restrito. Fale com a CCO se precisar de uma conta.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/js/common.js"></script>
+<script src="/js/login.js"></script>
+</body>
+</html>

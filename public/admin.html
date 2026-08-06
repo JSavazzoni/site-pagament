@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administração — Folha de Pagamento</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💵</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/painel.html">
+      <span class="brand-mark">R$→$</span>
+      <div>
+        <h1>Administração</h1>
+        <p class="brand-sub">Setores e contas de acesso</p>
+      </div>
+    </a>
+    <nav class="topbar-nav">
+      <a href="/painel.html">Painel</a>
+      <a href="/admin.html" class="active">Administração</a>
+    </nav>
+    <div class="topbar-user">
+      <div class="user-chip">
+        <span class="name" id="user-name">—</span>
+        <span class="role">CCO</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">Sair</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Setores</h2>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-novo-setor" type="button">+ Setor</button>
+      </div>
+    </div>
+
+    <form class="form-inline" id="form-setor" hidden>
+      <div class="field">
+        <label for="setor-nome">Nome do setor</label>
+        <input class="input" id="setor-nome" placeholder="Ex.: Vendas" required>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Criar</button>
+        <button class="btn btn-ghost" type="button" id="btn-cancelar-setor">Cancelar</button>
+      </div>
+    </form>
+
+    <div class="table-scroll">
+      <table class="grid grid-compact" id="tabela-setores">
+        <thead>
+          <tr>
+            <th class="col-nome">Nome</th>
+            <th>Status</th>
+            <th class="num">Gestores ativos</th>
+            <th>Criado em</th>
+            <th class="col-acao"><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-setores"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="empty-setores" hidden>Nenhum setor cadastrado ainda.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Usuários</h2>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-novo-usuario" type="button">+ Usuário</button>
+      </div>
+    </div>
+
+    <form class="form-inline" id="form-usuario" hidden>
+      <div class="field">
+        <label for="usuario-nome">Nome</label>
+        <input class="input" id="usuario-nome" required>
+      </div>
+      <div class="field">
+        <label for="usuario-username">Usuário (login)</label>
+        <input class="input" id="usuario-username" placeholder="ex.: ana.silva" required>
+      </div>
+      <div class="field">
+        <label for="usuario-senha">Senha</label>
+        <input class="input" id="usuario-senha" type="password" minlength="8" required>
+      </div>
+      <div class="field">
+        <label for="usuario-papel">Papel</label>
+        <select class="input" id="usuario-papel">
+          <option value="gestor">Gestor</option>
+          <option value="cco">CCO</option>
+        </select>
+      </div>
+      <div class="field" id="campo-setor-usuario">
+        <label for="usuario-setor">Setor</label>
+        <select class="input" id="usuario-setor"></select>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Criar</button>
+        <button class="btn btn-ghost" type="button" id="btn-cancelar-usuario">Cancelar</button>
+      </div>
+    </form>
+    <p class="error-text" id="usuario-error" style="padding: 0 18px;"></p>
+
+    <div class="table-scroll">
+      <table class="grid grid-compact" id="tabela-usuarios">
+        <thead>
+          <tr>
+            <th class="col-nome">Nome</th>
+            <th>Usuário</th>
+            <th>Papel</th>
+            <th>Setor</th>
+            <th>Status</th>
+            <th class="col-acao"><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-usuarios"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="empty-usuarios" hidden>Nenhum usuário cadastrado ainda.</p>
+  </section>
+
+</main>
+
+<div class="modal-backdrop" id="modal-reset">
+  <div class="modal">
+    <h3>Redefinir senha</h3>
+    <p class="hint" id="reset-usuario-label">—</p>
+    <form class="modal-form" id="form-reset">
+      <div class="field">
+        <label for="reset-senha">Nova senha</label>
+        <input class="input" id="reset-senha" type="password" minlength="8" required autocomplete="new-password">
+      </div>
+      <p class="error-text" id="reset-error"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="btn-reset-cancelar">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Redefinir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

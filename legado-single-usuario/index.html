@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Folha de Pagamento — Santa Group</title>
+  <meta name="description" content="Folha de pagamento com conversão automática de reais para dólar usando a cotação atual.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💵</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">R$→$</span>
+      <div>
+        <h1>Folha de Pagamento</h1>
+        <p class="brand-sub">Conversão automática de Reais para Dólar</p>
+      </div>
+    </div>
+
+    <div class="quotes" id="quotes">
+      <div class="quote" id="quote-usd">
+        <span class="quote-label">USD / BRL</span>
+        <strong class="quote-value" data-usd-value>—</strong>
+        <span class="quote-var" data-usd-var></span>
+      </div>
+      <div class="quote" id="quote-eur">
+        <span class="quote-label">EUR / BRL</span>
+        <strong class="quote-value" data-eur-value>—</strong>
+        <span class="quote-var" data-eur-var></span>
+      </div>
+      <div class="quote-meta">
+        <span id="quote-time">Buscando cotação…</span>
+        <button class="btn btn-ghost btn-sm" id="btn-refresh" type="button" title="Atualizar cotação">
+          <span class="ico-refresh" aria-hidden="true">↻</span> Atualizar
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ====================== PAINEL DE CONTROLE ====================== -->
+  <section class="panel" aria-label="Parâmetros da folha">
+    <div class="panel-grid">
+
+      <div class="field">
+        <label for="competencia">Competência</label>
+        <div class="field-row">
+          <input type="month" id="competencia" class="input">
+          <button class="btn btn-ghost btn-sm" id="btn-copiar-mes" type="button"
+                  title="Copiar colaboradores do mês anterior">Copiar mês anterior</button>
+        </div>
+        <small class="hint" id="hint-competencia">Cada mês guarda sua própria folha.</small>
+      </div>
+
+      <div class="field">
+        <label for="taxa-conversao">Taxa de conversão (R$ por US$ 1)</label>
+        <div class="field-row">
+          <input type="text" id="taxa-conversao" class="input input-num" inputmode="decimal">
+          <button class="btn btn-ghost btn-sm" id="btn-usar-cotacao" type="button">Usar cotação</button>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="auto-cotacao">
+          <span>Sincronizar com a cotação ao vivo</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="dias-uteis">Dias úteis no mês</label>
+        <input type="number" id="dias-uteis" class="input input-num" min="1" max="31" step="1">
+        <small class="hint">Usado no cálculo do custo diário.</small>
+      </div>
+
+      <div class="field">
+        <label for="taxa-wise">Taxa Wise (%)</label>
+        <input type="text" id="taxa-wise" class="input input-num" inputmode="decimal">
+        <small class="hint">Aplicada sobre o valor em dólar.</small>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ====================== RESUMO ====================== -->
+  <section class="kpis" aria-label="Resumo da folha">
+    <div class="kpi">
+      <span class="kpi-label">Colaboradores</span>
+      <strong class="kpi-value" id="kpi-qtd">0</strong>
+    </div>
+    <div class="kpi kpi-brl">
+      <span class="kpi-label">Total da folha</span>
+      <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-custo-diario">Custo diário: R$ 0,00</span>
+    </div>
+    <div class="kpi kpi-usd">
+      <span class="kpi-label">Total em dólar</span>
+      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
+      <span class="kpi-foot" id="kpi-taxa-usada">à taxa de R$ 0,00</span>
+    </div>
+    <div class="kpi kpi-usd">
+      <span class="kpi-label">Total com taxas Wise</span>
+      <strong class="kpi-value" id="kpi-total-usd-taxas">$0.00</strong>
+      <span class="kpi-foot" id="kpi-total-taxas">Taxas: $0.00</span>
+    </div>
+    <div class="kpi kpi-diff">
+      <span class="kpi-label">Custo real na cotação de hoje</span>
+      <strong class="kpi-value" id="kpi-custo-real">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-diferenca">—</span>
+    </div>
+  </section>
+
+  <!-- ====================== FOLHA DE PAGAMENTO ====================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Folha de pagamento</h2>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-add" type="button">+ Colaborador</button>
+        <button class="btn" id="btn-export-csv" type="button">Exportar CSV</button>
+        <button class="btn" id="btn-import-csv" type="button">Importar CSV</button>
+        <button class="btn" id="btn-print" type="button">Imprimir / PDF</button>
+        <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="grid" id="tabela-folha">
+        <thead>
+          <tr>
+            <th class="col-idx" scope="col">#</th>
+            <th class="col-nome" scope="col">Nome</th>
+            <th class="num" scope="col">Salário base</th>
+            <th class="num" scope="col">Comissão</th>
+            <th class="num" scope="col">Aluguel / Outros</th>
+            <th class="num" scope="col">Bonificação</th>
+            <th class="num calc" scope="col">Total</th>
+            <th class="num calc" scope="col">Custo diário</th>
+            <th scope="col">Cidade</th>
+            <th scope="col">Cargo</th>
+            <th scope="col">Data</th>
+            <th class="col-obs" scope="col">OBS</th>
+            <th class="col-acao" scope="col"><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-folha"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="total-label">Total</td>
+            <td class="num" id="t-salario">R$ 0,00</td>
+            <td class="num" id="t-comissao">R$ 0,00</td>
+            <td class="num" id="t-aluguel">R$ 0,00</td>
+            <td class="num" id="t-bonificacao">R$ 0,00</td>
+            <td class="num calc" id="t-total">R$ 0,00</td>
+            <td class="num calc" id="t-diario">R$ 0,00</td>
+            <td colspan="5"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <p class="empty" id="empty-folha" hidden>
+      Nenhum colaborador ainda. Clique em <strong>+ Colaborador</strong> para começar.
+    </p>
+  </section>
+
+  <!-- ====================== PAGAMENTO EM DÓLAR ====================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Pagamento em dólar</h2>
+      <div class="card-actions">
+        <button class="btn" id="btn-export-wise" type="button">Exportar lista de pagamento</button>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="grid grid-usd" id="tabela-usd">
+        <thead>
+          <tr>
+            <th class="col-idx" scope="col">#</th>
+            <th class="col-nome" scope="col">Nome</th>
+            <th class="num" scope="col">Valor (R$)</th>
+            <th class="num calc" scope="col">Dólar ($)</th>
+            <th class="num calc" scope="col">Taxa Wise</th>
+            <th class="num calc" scope="col">Total c/ taxas ($)</th>
+            <th scope="col">Link Wise</th>
+            <th class="col-acao" scope="col"><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-usd"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="total-label">Total</td>
+            <td class="num" id="u-brl">R$ 0,00</td>
+            <td class="num calc" id="u-usd">$0.00</td>
+            <td class="num calc" id="u-taxa">$0.00</td>
+            <td class="num calc" id="u-total">$0.00</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <p class="empty" id="empty-usd" hidden>Adicione colaboradores para ver os valores em dólar.</p>
+  </section>
+
+  <footer class="foot">
+    <p>
+      Os dados ficam salvos apenas neste navegador (<code>localStorage</code>).
+      Cotação: <a href="https://economia.awesomeapi.com.br" target="_blank" rel="noopener">AwesomeAPI</a>.
+    </p>
+    <button class="btn btn-danger btn-sm" id="btn-limpar" type="button">Limpar mês atual</button>
+  </footer>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
