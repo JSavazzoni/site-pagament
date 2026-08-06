@@ -661,10 +661,18 @@ tr.filtered-out { display: none; }
    rolagem lateral. Modo "Valores" (setor do gestor): mesma ideia para digitacao. */
 .grid.modo-pagamento { min-width: 720px; }
 .grid.modo-pagamento .det { display: none; }
+/* Com poucas colunas sobra muito espaco; sem isso ele ia todo para o nome e
+   abria um vao enorme ate os valores. Divide entre nome e link do Wise (que
+   guarda uma URL e aproveita a largura). */
+.grid.modo-pagamento .col-nome { width: 34%; }
+.grid.modo-pagamento .col-wise { width: 26%; }
+.grid.modo-pagamento .col-calc { min-width: 128px; }
 .grid.modo-valores { min-width: 820px; }
 .grid.modo-valores .cad { display: none; }
 
-.wise-cell { display: flex; align-items: center; gap: 2px; padding-right: 5px; }
+/* Limita a largura para o campo e a setinha de abrir ficarem juntos: numa celula
+   larga o link ficaria na esquerda e a seta perdida na outra ponta. */
+.wise-cell { display: flex; align-items: center; gap: 2px; padding-right: 5px; max-width: 250px; }
 .wise-cell .cell { flex: 1; min-width: 0; }
 .wise-link {
   flex: none; font-size: 13px; line-height: 1; text-decoration: none;
