@@ -27,6 +27,7 @@
       state.user = data.user;
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
+      App.pintarIcones();
 
       App.$('#titulo-setor').textContent = data.user.sectorName || 'Meu Setor';
 
@@ -74,6 +75,7 @@
     var c = state.config;
     var vivo = c.taxaConversaoAuto ? ' (ao vivo)' : '';
     App.$('#chip-taxa').textContent = 'R$ ' + Calc.num(c.taxaConversao) + ' / US$ 1' + vivo;
+    App.$('#chip-taxa-eur').textContent = 'R$ ' + Calc.num(c.taxaConversaoEur) + ' / € 1' + vivo;
     App.$('#chip-taxa-gbp').textContent = 'R$ ' + Calc.num(c.taxaConversaoGbp) + ' / £ 1' + vivo;
     App.$('#chip-dias').textContent = c.diasUteis + ' dias';
     App.$('#chip-wise').textContent = Calc.num(c.taxaWisePct) + '%';
@@ -94,7 +96,7 @@
     return '<tr data-id="' + it.id + '"' +
         ' class="' + (t ? 'is-pago ' : '') + (aberta ? 'aberta' : '') + '"' +
         ' data-busca="' + esc([it.nome, it.cargo, it.cidade, it.obs].join(' ').toLowerCase()) + '">' +
-      '<td class="exp stick"><button class="btn-exp" data-exp type="button" aria-label="Ver detalhes">&#9654;</button></td>' +
+      '<td class="exp stick"><button class="btn-exp" data-exp type="button" aria-label="Ver detalhes">' + App.ico('seta', 13) + '</button></td>' +
       '<td class="idx">' + (i + 1) + '</td>' +
       '<td><input class="cell nome" data-f="nome" placeholder="Nome do colaborador" value="' + esc(it.nome) + '"' + d + '></td>' +
       money('salarioBase', it.salarioBase, t, 'sep-l') +
@@ -103,13 +105,17 @@
       money('bonificacao', it.bonificacao, t, '') +
       '<td class="calc calc-total sep-l" data-c="total">R$ 0,00</td>' +
       '<td class="calc calc-diario" data-c="diario">R$ 0,00</td>' +
-      '<td class="calc calc-usd sep-l" data-c="dolar">$0.00</td>' +
-      '<td class="calc calc-gbp" data-c="libra">&pound;0.00</td>' +
+      '<td class="moeda sep-l"><span class="moeda-tag m-' + Calc.moedaDe(it) + '">' +
+        Calc.moedaDe(it) + '</span></td>' +
+      '<td class="enviar" data-c-enviar>' +
+        '<div class="enviar-val m-' + Calc.moedaDe(it) + '">&mdash;</div>' +
+        '<div class="enviar-brl">&mdash;</div>' +
+      '</td>' +
       '<td class="sep-l">' + (t
-        ? '<span class="badge badge-accent">&#10003; Pago</span>'
+        ? '<span class="badge badge-accent">' + App.ico('check', 12) + ' Pago</span>'
         : '<span class="badge badge-neutral">Pendente</span>') + '</td>' +
       '<td class="acao">' + (t ? '' :
-        '<button class="btn-icon danger" data-del type="button" title="Remover" aria-label="Remover">&times;</button>') + '</td>' +
+        '<button class="btn-icon danger" data-del type="button" title="Remover" aria-label="Remover">' + App.ico('lixo', 15) + '</button>') + '</td>' +
       '</tr>';
   }
 
@@ -132,7 +138,7 @@
           '<div class="det-field" style="grid-column:span 2;"><span>Link do Wise</span><div class="det-wise">' +
             '<input class="input" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
             '<a class="btn btn-sm" data-wise-abrir target="_blank" rel="noopener"' +
-              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>Abrir &#8599;</a>' +
+              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 13) + ' Abrir</a>' +
           '</div></div>' +
           campoTexto('obs', 'Observações', it.obs, d, 'Anotação livre') +
         '</div>' +
@@ -141,7 +147,10 @@
           '<div class="det-field"><span>Em dólar</span><div class="valor usd" data-c="dolar2">$0.00</div></div>' +
           '<div class="det-field"><span>Taxa Wise (dólar)</span><div class="valor" data-c="fee">$0.00</div></div>' +
           '<div class="det-field"><span>Total com taxa (US$)</span><div class="valor usd" data-c="totalUsd">$0.00</div></div>' +
-          '<div class="det-field"><span>Em libra</span><div class="valor gbp" data-c="libra2">&pound;0.00</div></div>' +
+          '<div class="det-field"><span>Em euro</span><div class="valor m-EUR" data-c="euro2">&euro;0,00</div></div>' +
+          '<div class="det-field"><span>Taxa Wise (euro)</span><div class="valor" data-c="feeEur">&euro;0,00</div></div>' +
+          '<div class="det-field"><span>Total com taxa (€)</span><div class="valor m-EUR" data-c="totalEur">&euro;0,00</div></div>' +
+          '<div class="det-field"><span>Em libra</span><div class="valor m-GBP" data-c="libra2">&pound;0.00</div></div>' +
           '<div class="det-field"><span>Taxa Wise (libra)</span><div class="valor" data-c="feeGbp">&pound;0.00</div></div>' +
           '<div class="det-field"><span>Total com taxa (£)</span><div class="valor gbp" data-c="totalGbp">&pound;0.00</div></div>' +
         '</div>' +
@@ -180,14 +189,25 @@
       var r = Calc.calcItem(it, state.config);
       escreve(tr, 'total', Calc.brl(r.total));
       escreve(tr, 'diario', Calc.brl(r.diario));
-      escreve(tr, 'dolar', Calc.usd(r.dolar));
-      escreve(tr, 'libra', Calc.gbp(r.libra));
+      // o que o gestor ve: o valor na moeda em que a pessoa recebe, e o custo em real
+      var cel = tr.querySelector('[data-c-enviar]');
+      if (cel) {
+        var val = cel.querySelector('.enviar-val');
+        val.className = 'enviar-val m-' + r.moeda;
+        val.textContent = Calc.fmtMoeda(r.moeda, r.aEnviar);
+        cel.querySelector('.enviar-brl').textContent = '= ' + Calc.brl(r.equivaleBrl);
+      }
+      var tag = tr.querySelector('.moeda-tag');
+      if (tag) { tag.className = 'moeda-tag m-' + r.moeda; tag.textContent = r.moeda; }
 
       var det = TB.querySelector('tr[data-det="' + it.id + '"]');
       if (det) {
         escreve(det, 'dolar2', Calc.usd(r.dolar));
         escreve(det, 'fee', Calc.usd(r.fee));
         escreve(det, 'totalUsd', Calc.usd(r.totalUsd));
+        escreve(det, 'euro2', Calc.eur(r.euro));
+        escreve(det, 'feeEur', Calc.eur(r.feeEur));
+        escreve(det, 'totalEur', Calc.eur(r.totalEur));
         escreve(det, 'libra2', Calc.gbp(r.libra));
         escreve(det, 'feeGbp', Calc.gbp(r.feeGbp));
         escreve(det, 'totalGbp', Calc.gbp(r.totalGbp));
@@ -204,22 +224,33 @@
     App.$('#t-bonificacao').textContent = Calc.brl(totais.bonificacao);
     App.$('#t-total').textContent = Calc.brl(totais.total);
     App.$('#t-diario').textContent = Calc.brl(totais.diario);
-    App.$('#t-dolar').textContent = Calc.usd(totais.dolar);
-    App.$('#t-libra').textContent = Calc.gbp(totais.libra);
+    App.$('#t-enviar').innerHTML = resumoMoedas(totais);
 
     App.$('#kpi-qtd').textContent = state.itens.length;
     App.$('#kpi-media').textContent = 'Média: ' + Calc.brl(state.itens.length ? totais.total / state.itens.length : 0);
     App.$('#kpi-total-brl').textContent = Calc.brl(totais.total);
     App.$('#kpi-custo-diario').textContent = 'Custo diário: ' + Calc.brl(totais.diario) + ' (' + state.config.diasUteis + ' dias)';
-    App.$('#kpi-total-usd').textContent = Calc.usd(totais.dolar);
-    App.$('#kpi-taxa-usada').textContent = 'a R$ ' + Calc.num(state.config.taxaConversao) + ' por US$ 1';
-    App.$('#kpi-total-gbp').textContent = Calc.gbp(totais.libra);
-    App.$('#kpi-taxa-usada-gbp').textContent = 'a R$ ' + Calc.num(state.config.taxaConversaoGbp) + ' por £ 1';
+    App.$('#kpi-enviar').innerHTML = resumoMoedas(totais);
+    var emUso = Calc.moedasEmUso(totais);
+    App.$('#kpi-enviar-foot').textContent = emUso.length
+      ? emUso.length + ' moeda' + (emUso.length === 1 ? '' : 's') + ' neste setor'
+      : 'Nenhum colaborador ainda';
+    App.$('#kpi-custo-total').textContent = Calc.brl(totais.equivaleBrl);
+    App.$('#kpi-custo-total-foot').textContent = 'Folha + taxa Wise (' + Calc.num(state.config.taxaWisePct) + '%)';
 
     var pagos = state.itens.filter(function (it) { return it.pago; });
     App.$('#kpi-pago').textContent = pagos.length + ' de ' + state.itens.length;
     App.$('#kpi-pago-valor').textContent = Calc.brl(Calc.calcTotais(pagos, state.config).total) + ' enviados';
     App.$('#kpi-progress').style.width = (state.itens.length ? (pagos.length / state.itens.length) * 100 : 0) + '%';
+  }
+
+  /** "$1.234,56 · €890,00" -- so as moedas que o setor usa. */
+  function resumoMoedas(t) {
+    var moedas = Calc.moedasEmUso(t);
+    if (!moedas.length) return '&mdash;';
+    return moedas.map(function (m) {
+      return '<span class="m-' + m + '">' + Calc.fmtMoeda(m, t.porMoeda[m].aEnviar) + '</span>';
+    }).join('<span style="color:var(--ink-4)"> · </span>');
   }
 
   function escreve(raiz, chave, texto) {

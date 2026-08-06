@@ -62,7 +62,7 @@ async function getQuote(force) {
     cache = { data, at: Date.now() };
     // sync lazy: aplica em toda competencia com taxa automatica ligada.
     // Nao pode derrubar a requisicao da cotacao se o banco falhar.
-    try { await configRepo.syncAutoRates(data.usd, data.gbp); } catch (err) {
+    try { await configRepo.syncAutoRates(data.usd, data.eur, data.gbp); } catch (err) {
       console.error('Falha ao aplicar cotacao automatica:', err.message);
     }
     return data;

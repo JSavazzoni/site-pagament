@@ -17,6 +17,7 @@ function toPublic(row) {
     data: row.data,
     obs: row.obs,
     wiseLink: row.wise_link,
+    moedaPagamento: row.moeda_pagamento || 'USD',
     pago: !!row.pago,
     pagoEm: row.pago_em,
     createdAt: row.created_at,
@@ -42,8 +43,13 @@ async function listBySector(sectorId, competencia) {
   return rows.map(toPublic);
 }
 
+/** So aceita codigo conhecido -- o resto vira USD em vez de estourar o CHECK. */
+function moedaValida(m) {
+  return Calc.MOEDAS[String(m || '').toUpperCase()] ? String(m).toUpperCase() : 'USD';
+}
+
 const COLUNAS_INSERT =
-  '(sector_id, competencia, nome, salario_base, comissao, aluguel, bonificacao, cidade, cargo, data, obs, wise_link, created_by)';
+  '(sector_id, competencia, nome, salario_base, comissao, aluguel, bonificacao, cidade, cargo, data, obs, wise_link, moeda_pagamento, created_by)';
 
 /** Argumentos do INSERT na ordem de COLUNAS_INSERT. */
 function argsInsert(data) {
@@ -52,7 +58,7 @@ function argsInsert(data) {
     Calc.parseNum(data.salarioBase), Calc.parseNum(data.comissao),
     Calc.parseNum(data.aluguel), Calc.parseNum(data.bonificacao),
     data.cidade || '', data.cargo || '', data.data || '', data.obs || '',
-    data.wiseLink || '', data.createdBy || null
+    data.wiseLink || '', moedaValida(data.moedaPagamento), data.createdBy || null
   ];
 }
 
@@ -61,7 +67,7 @@ function argsInsert(data) {
  * rede ate o Turso); agora e uma so. O mesmo vale para update() e setPago().
  */
 const SQL_INSERT = `INSERT INTO folha_itens ${COLUNAS_INSERT}
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`;
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`;
 
 async function create(data) {
   const rows = await db.all(SQL_INSERT, argsInsert(data));
@@ -88,11 +94,13 @@ async function update(id, patch) {
        data         = COALESCE(?, data),
        obs          = COALESCE(?, obs),
        wise_link    = COALESCE(?, wise_link),
+       moeda_pagamento = COALESCE(?, moeda_pagamento),
        updated_at   = strftime('%Y-%m-%dT%H:%M:%fZ','now')
      WHERE id = ? RETURNING *`,
     [
       v(patch.nome), n(patch.salarioBase), n(patch.comissao), n(patch.aluguel), n(patch.bonificacao),
       v(patch.cidade), v(patch.cargo), v(patch.data), v(patch.obs), v(patch.wiseLink),
+      patch.moedaPagamento != null ? moedaValida(patch.moedaPagamento) : null,
       id
     ]
   );
@@ -175,7 +183,8 @@ async function copyPrevious({ sectorId, competencia, replace, createdBy }) {
         sectorId, competencia, createdBy,
         nome: row.nome, salarioBase: row.salario_base, comissao: row.comissao,
         aluguel: row.aluguel, bonificacao: row.bonificacao,
-        cidade: row.cidade, cargo: row.cargo, data: '', obs: row.obs, wiseLink: row.wise_link
+        cidade: row.cidade, cargo: row.cargo, data: '', obs: row.obs, wiseLink: row.wise_link,
+        moedaPagamento: row.moeda_pagamento
       })
     });
   }

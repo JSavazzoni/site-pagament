@@ -42,14 +42,14 @@
         </button>
         <div class="menu-panel" role="menu">
           <button class="menu-item" id="mi-senha" type="button" role="menuitem">
-            <span class="mi-ico">&#128273;</span> Trocar minha senha
+            <span class="mi-ico" data-ico="chave"></span> Trocar minha senha
           </button>
           <a class="menu-item" href="/admin.html" role="menuitem">
-            <span class="mi-ico">&#9881;</span> Setores e usu&aacute;rios
+            <span class="mi-ico" data-ico="engrenagem"></span> Setores e usu&aacute;rios
           </a>
           <div class="menu-sep"></div>
           <button class="menu-item danger" id="mi-sair" type="button" role="menuitem">
-            <span class="mi-ico">&#8594;]</span> Sair
+            <span class="mi-ico" data-ico="sair"></span> Sair
           </button>
         </div>
       </div>
@@ -74,8 +74,9 @@
 
       <div class="quote-chip" id="quote-chip" title="Cota&ccedil;&atilde;o de mercado ao vivo">
         <span class="dot"></span>
-        <span class="par"><span class="moeda">US$</span><span class="val" id="cotacao-usd">&mdash;</span></span>
-        <span class="par"><span class="moeda gbp">&pound;</span><span class="val gbp" id="cotacao-gbp">&mdash;</span></span>
+        <span class="par"><span class="moeda m-USD">US$</span><span class="val" id="cotacao-usd">&mdash;</span></span>
+        <span class="par"><span class="moeda m-EUR">&euro;</span><span class="val m-EUR" id="cotacao-eur">&mdash;</span></span>
+        <span class="par"><span class="moeda m-GBP">&pound;</span><span class="val m-GBP" id="cotacao-gbp">&mdash;</span></span>
         <span class="ago" id="cotacao-time">buscando</span>
         <button type="button" id="btn-refresh" aria-label="Atualizar cota&ccedil;&atilde;o"><span class="ico-refresh">&#8635;</span></button>
       </div>
@@ -83,7 +84,7 @@
       <div class="toolbar-spacer"></div>
 
       <div class="search">
-        <span class="ico">&#9906;</span>
+        <span class="ico" data-ico="busca"></span>
         <input id="busca" type="search" placeholder="Buscar colaborador, cargo, cidade..." autocomplete="off">
         <button class="clear" id="busca-clear" type="button" aria-label="Limpar busca">&times;</button>
       </div>
@@ -99,20 +100,10 @@
       <strong class="kpi-value" id="kpi-total-brl">R$ 0,00</strong>
       <span class="kpi-foot" id="kpi-custo-diario">Custo di&aacute;rio: R$ 0,00</span>
     </div>
-    <div class="kpi kpi-accent">
-      <span class="kpi-label">A enviar em d&oacute;lar</span>
-      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
-      <span class="kpi-foot" id="kpi-total-usd-taxas">c/ taxa Wise: $0.00</span>
-    </div>
-    <div class="kpi kpi-violet">
-      <span class="kpi-label">A enviar em libra</span>
-      <strong class="kpi-value" id="kpi-total-gbp">&pound;0.00</strong>
-      <span class="kpi-foot" id="kpi-total-gbp-taxas">c/ taxa Wise: &pound;0.00</span>
-    </div>
     <div class="kpi kpi-amber">
-      <span class="kpi-label">Custo na cota&ccedil;&atilde;o de hoje</span>
-      <strong class="kpi-value" id="kpi-custo-real">&mdash;</strong>
-      <span class="kpi-foot" id="kpi-diferenca">&mdash;</span>
+      <span class="kpi-label">Custo com taxas</span>
+      <strong class="kpi-value" id="kpi-custo-total">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-custo-total-foot">Folha + taxa Wise</span>
     </div>
     <div class="kpi">
       <span class="kpi-label">Pagamentos</span>
@@ -127,13 +118,17 @@
     </div>
   </section>
 
+  <!-- um cartao por moeda de pagamento em uso, montado pelo painel.js -->
+  <section class="kpis" id="kpis-moeda" aria-label="A enviar por moeda" hidden></section>
+
   <section class="collapse" id="params">
     <div class="collapse-head" id="params-head" role="button" tabindex="0" aria-expanded="false">
       <span class="collapse-caret">&#9654;</span>
       <h2>Par&acirc;metros do m&ecirc;s</h2>
       <div class="collapse-summary chips">
-        <span class="chip"><span class="k">D&oacute;lar</span><span class="v" id="sum-taxa">&mdash;</span></span>
-        <span class="chip"><span class="k">Libra</span><span class="v" id="sum-taxa-gbp">&mdash;</span></span>
+        <span class="chip"><span class="k">D&oacute;lar</span><span class="v m-USD" id="sum-taxa">&mdash;</span></span>
+        <span class="chip"><span class="k">Euro</span><span class="v m-EUR" id="sum-taxa-eur">&mdash;</span></span>
+        <span class="chip"><span class="k">Libra</span><span class="v m-GBP" id="sum-taxa-gbp">&mdash;</span></span>
         <span class="chip"><span class="k">Dias &uacute;teis</span><span class="v" id="sum-dias">&mdash;</span></span>
         <span class="chip"><span class="k">Wise</span><span class="v" id="sum-wise">&mdash;</span></span>
       </div>
@@ -149,6 +144,16 @@
             <span class="affix right">/ US$ 1</span>
           </div>
           <small class="hint">Quantos reais valem um d&oacute;lar neste m&ecirc;s.</small>
+        </div>
+
+        <div class="field">
+          <label for="taxa-conversao-eur">Taxa do euro</label>
+          <div class="input-affix">
+            <span class="affix">R$</span>
+            <input type="text" id="taxa-conversao-eur" inputmode="decimal" aria-label="Reais por euro">
+            <span class="affix right">/ &euro; 1</span>
+          </div>
+          <small class="hint">Convers&atilde;o independente &mdash; n&atilde;o sai do d&oacute;lar.</small>
         </div>
 
         <div class="field">
@@ -197,14 +202,14 @@
   <section id="setores-container" aria-label="Folha por setor"></section>
 
   <div class="card empty" id="empty-geral" hidden>
-    <span class="empty-ico">&#128203;</span>
+    <span class="empty-ico" data-ico="prancheta" data-ico-tam="30"></span>
     <strong>Nenhum lan&ccedil;amento nesta compet&ecirc;ncia</strong>
     <p>Os gestores ainda n&atilde;o cadastraram colaboradores para este m&ecirc;s.</p>
     <button class="btn" id="btn-ir-admin" type="button">Gerenciar setores e gestores</button>
   </div>
 
   <div class="card empty" id="empty-busca" hidden>
-    <span class="empty-ico">&#9906;</span>
+    <span class="empty-ico" data-ico="busca" data-ico-tam="30"></span>
     <strong>Nada encontrado</strong>
     <p>Nenhum colaborador corresponde &agrave; sua busca nesta compet&ecirc;ncia.</p>
   </div>
@@ -218,7 +223,7 @@
 
 <div class="modal-backdrop" id="modal-senha">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-senha">
-    <div class="modal-icon">&#128273;</div>
+    <div class="modal-icon" data-ico="chave" data-ico-tam="20"></div>
     <h3 id="t-senha">Trocar senha</h3>
     <p class="hint">Informe a senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
     <form class="modal-form" id="form-senha">
@@ -226,14 +231,14 @@
         <label for="senha-atual">Senha atual</label>
         <div class="pw-wrap">
           <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
-          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1"></button>
         </div>
       </div>
       <div class="field">
         <label for="senha-nova">Nova senha</label>
         <div class="pw-wrap">
           <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
-          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1"></button>
         </div>
       </div>
       <p class="error-text" id="senha-error" role="alert"></p>

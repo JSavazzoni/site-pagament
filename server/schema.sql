@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS config_mes (
   dias_uteis           INTEGER NOT NULL DEFAULT 26 CHECK (dias_uteis BETWEEN 1 AND 31),
   taxa_wise_pct        REAL    NOT NULL DEFAULT 1  CHECK (taxa_wise_pct >= 0),
   taxa_conversao       REAL    NOT NULL DEFAULT 5  CHECK (taxa_conversao > 0),
+  taxa_conversao_eur   REAL    NOT NULL DEFAULT 5.8 CHECK (taxa_conversao_eur > 0),
   taxa_conversao_gbp   REAL    NOT NULL DEFAULT 6.5 CHECK (taxa_conversao_gbp > 0),
   taxa_conversao_auto  INTEGER NOT NULL DEFAULT 0  CHECK (taxa_conversao_auto IN (0,1)),
   updated_by           INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -66,6 +67,8 @@ CREATE TABLE IF NOT EXISTS folha_itens (
   data          TEXT NOT NULL DEFAULT '',
   obs           TEXT NOT NULL DEFAULT '',
   wise_link     TEXT NOT NULL DEFAULT '',
+  -- moeda em que a pessoa recebe de fato; o salario continua definido em real
+  moeda_pagamento TEXT NOT NULL DEFAULT 'USD' CHECK (moeda_pagamento IN ('BRL','USD','EUR','GBP')),
   pago          INTEGER NOT NULL DEFAULT 0 CHECK (pago IN (0,1)),
   pago_em       TEXT,
   created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,

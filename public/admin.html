@@ -42,14 +42,14 @@
         </button>
         <div class="menu-panel" role="menu">
           <button class="menu-item" id="mi-senha" type="button" role="menuitem">
-            <span class="mi-ico">&#128273;</span> Trocar minha senha
+            <span class="mi-ico" data-ico="chave"></span> Trocar minha senha
           </button>
           <a class="menu-item" href="/painel.html" role="menuitem">
-            <span class="mi-ico">&#128202;</span> Voltar ao painel
+            <span class="mi-ico" data-ico="painel"></span> Voltar ao painel
           </a>
           <div class="menu-sep"></div>
           <button class="menu-item danger" id="mi-sair" type="button" role="menuitem">
-            <span class="mi-ico">&#8594;]</span> Sair
+            <span class="mi-ico" data-ico="sair"></span> Sair
           </button>
         </div>
       </div>
@@ -70,7 +70,7 @@
       </div>
       <div id="lista-setores"></div>
       <div class="empty" id="empty-setores" hidden>
-        <span class="empty-ico">&#127970;</span>
+        <span class="empty-ico" data-ico="predio" data-ico-tam="30"></span>
         <strong>Nenhum setor ainda</strong>
         <p>Crie o primeiro setor para depois vincular um gestor a ele.</p>
         <button class="btn btn-primary" id="btn-primeiro-setor" type="button">+ Criar setor</button>
@@ -86,7 +86,7 @@
       </div>
       <div id="lista-usuarios"></div>
       <div class="empty" id="empty-usuarios" hidden>
-        <span class="empty-ico">&#128100;</span>
+        <span class="empty-ico" data-ico="pessoa" data-ico-tam="30"></span>
         <strong>Nenhuma conta cadastrada</strong>
         <p>Crie contas de gestor para que cada setor lance a pr&oacute;pria folha.</p>
       </div>
@@ -103,7 +103,7 @@
 <!-- novo setor -->
 <div class="modal-backdrop" id="modal-setor">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-setor">
-    <div class="modal-icon">&#127970;</div>
+    <div class="modal-icon" data-ico="predio" data-ico-tam="20"></div>
     <h3 id="t-setor">Novo setor</h3>
     <p class="hint">O gestor desse setor s&oacute; enxerga a folha dele.</p>
     <form class="modal-form" id="form-setor">
@@ -123,7 +123,7 @@
 <!-- novo usuario -->
 <div class="modal-backdrop" id="modal-usuario">
   <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="t-usuario">
-    <div class="modal-icon">&#128100;</div>
+    <div class="modal-icon" data-ico="pessoa" data-ico-tam="20"></div>
     <h3 id="t-usuario">Nova conta de acesso</h3>
     <p class="hint">O usu&aacute;rio de login e a senha s&atilde;o criados agora e entregues &agrave; pessoa.</p>
     <form class="modal-form" id="form-usuario">
@@ -153,9 +153,9 @@
           <div class="field-row">
             <div class="pw-wrap" style="flex:1;">
               <input class="input" id="usuario-senha" type="text" minlength="8" required autocomplete="new-password">
-              <button class="pw-toggle" type="button" data-pw-toggle="usuario-senha" aria-label="Ocultar senha" tabindex="-1">&#128065;</button>
+              <button class="pw-toggle" type="button" data-pw-toggle="usuario-senha" aria-label="Ocultar senha" tabindex="-1"></button>
             </div>
-            <button class="btn btn-sm" type="button" id="btn-gerar-senha" title="Gerar senha forte">&#127922; Gerar</button>
+            <button class="btn btn-sm" type="button" id="btn-gerar-senha" title="Gerar senha forte"><span data-ico="dado"></span> Gerar</button>
           </div>
           <small class="hint">M&iacute;nimo de 8 caracteres. A pessoa pode trocar depois em &quot;Trocar minha senha&quot;.</small>
         </div>
@@ -172,7 +172,7 @@
 <!-- credenciais criadas -->
 <div class="modal-backdrop" id="modal-credenciais">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-cred">
-    <div class="modal-icon">&#9989;</div>
+    <div class="modal-icon" data-ico="check" data-ico-tam="20"></div>
     <h3 id="t-cred">Conta criada</h3>
     <p class="hint">Copie e envie estes dados para a pessoa. A senha n&atilde;o aparece de novo.</p>
     <div class="modal-form">
@@ -190,7 +190,7 @@
 <!-- redefinir senha -->
 <div class="modal-backdrop" id="modal-reset">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-reset">
-    <div class="modal-icon">&#128273;</div>
+    <div class="modal-icon" data-ico="chave" data-ico-tam="20"></div>
     <h3 id="t-reset">Redefinir senha</h3>
     <p class="hint" id="reset-usuario-label">&mdash;</p>
     <form class="modal-form" id="form-reset">
@@ -199,9 +199,9 @@
         <div class="field-row">
           <div class="pw-wrap" style="flex:1;">
             <input class="input" id="reset-senha" type="text" minlength="8" required autocomplete="new-password">
-            <button class="pw-toggle" type="button" data-pw-toggle="reset-senha" aria-label="Ocultar senha" tabindex="-1">&#128065;</button>
+            <button class="pw-toggle" type="button" data-pw-toggle="reset-senha" aria-label="Ocultar senha" tabindex="-1"></button>
           </div>
-          <button class="btn btn-sm" type="button" id="btn-gerar-reset" title="Gerar senha forte">&#127922; Gerar</button>
+          <button class="btn btn-sm" type="button" id="btn-gerar-reset" title="Gerar senha forte"><span data-ico="dado"></span> Gerar</button>
         </div>
       </div>
       <p class="error-text" id="reset-error" role="alert"></p>
@@ -216,7 +216,7 @@
 <!-- trocar a propria senha -->
 <div class="modal-backdrop" id="modal-senha">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-senha">
-    <div class="modal-icon">&#128273;</div>
+    <div class="modal-icon" data-ico="chave" data-ico-tam="20"></div>
     <h3 id="t-senha">Trocar senha</h3>
     <p class="hint">Informe a senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
     <form class="modal-form" id="form-senha">
@@ -224,14 +224,14 @@
         <label for="senha-atual">Senha atual</label>
         <div class="pw-wrap">
           <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
-          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1"></button>
         </div>
       </div>
       <div class="field">
         <label for="senha-nova">Nova senha</label>
         <div class="pw-wrap">
           <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
-          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1"></button>
         </div>
       </div>
       <p class="error-text" id="senha-error" role="alert"></p>

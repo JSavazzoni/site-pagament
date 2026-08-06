@@ -29,6 +29,7 @@
       if (data.user.role !== 'cco') { location.replace('/setor.html'); return; }
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
+      App.pintarIcones();
 
       state.competencia = App.mesAtualInput();
       monthNav = App.montarMonthNav('#month-nav', state.competencia, function (comp) {
@@ -94,6 +95,7 @@
     }).catch(function () {
       App.$('#quote-chip').classList.add('is-off');
       App.$('#cotacao-usd').textContent = '—';
+      App.$('#cotacao-eur').textContent = '—';
       App.$('#cotacao-gbp').textContent = '—';
       App.$('#cotacao-time').textContent = 'indisponível';
     });
@@ -104,6 +106,7 @@
     if (!q) return;
     App.$('#quote-chip').classList.remove('is-off');
     App.$('#cotacao-usd').textContent = Calc.brl(q.usd);
+    App.$('#cotacao-eur').textContent = q.eur ? Calc.brl(q.eur) : '—';
     App.$('#cotacao-gbp').textContent = q.gbp ? Calc.brl(q.gbp) : '—';
     App.$('#cotacao-time').textContent = App.tempoRelativo(q.at);
   }
@@ -115,16 +118,19 @@
   function renderConfig() {
     var c = state.config;
     App.$('#taxa-conversao').value = Calc.num(c.taxaConversao);
+    App.$('#taxa-conversao-eur').value = Calc.num(c.taxaConversaoEur);
     App.$('#taxa-conversao-gbp').value = Calc.num(c.taxaConversaoGbp);
     App.$('#dias-uteis').value = c.diasUteis;
     App.$('#taxa-wise').value = Calc.num(c.taxaWisePct);
     App.$('#auto-cotacao').checked = c.taxaConversaoAuto;
     App.$('#taxa-conversao').disabled = c.taxaConversaoAuto;
+    App.$('#taxa-conversao-eur').disabled = c.taxaConversaoAuto;
     App.$('#taxa-conversao-gbp').disabled = c.taxaConversaoAuto;
     App.$('#btn-usar-cotacao').disabled = c.taxaConversaoAuto;
 
     var auto = c.taxaConversaoAuto ? ' (auto)' : '';
     App.$('#sum-taxa').textContent = 'R$ ' + Calc.num(c.taxaConversao) + auto;
+    App.$('#sum-taxa-eur').textContent = 'R$ ' + Calc.num(c.taxaConversaoEur) + auto;
     App.$('#sum-taxa-gbp').textContent = 'R$ ' + Calc.num(c.taxaConversaoGbp) + auto;
     App.$('#sum-dias').textContent = c.diasUteis;
     App.$('#sum-wise').textContent = Calc.num(c.taxaWisePct) + '%';
@@ -135,6 +141,7 @@
       diasUteis: state.config.diasUteis,
       taxaWisePct: state.config.taxaWisePct,
       taxaConversao: state.config.taxaConversao,
+      taxaConversaoEur: state.config.taxaConversaoEur,
       taxaConversaoGbp: state.config.taxaConversaoGbp,
       taxaConversaoAuto: state.config.taxaConversaoAuto
     }, patch);
@@ -163,6 +170,29 @@
     return state.summary.sectors.reduce(function (a, s) { return a.concat(s.itens); }, []);
   }
 
+  /**
+   * Um cartao por moeda EM USO: o valor a enviar naquela moeda e, logo abaixo,
+   * quanto isso custa em real. Moeda sem ninguem nao vira cartao vazio.
+   */
+  function renderKpisMoeda() {
+    var box = App.$('#kpis-moeda');
+    var t = state.summary.geral;
+    var moedas = Calc.moedasEmUso(t);
+
+    box.innerHTML = moedas.map(function (m) {
+      var d = t.porMoeda[m];
+      var nome = Calc.MOEDAS[m].nome;
+      return '<div class="kpi kpi-moeda m-' + m + '">' +
+        '<span class="kpi-label">A enviar em ' + esc(nome.toLowerCase()) + '</span>' +
+        '<strong class="kpi-value m-' + m + '">' + Calc.fmtMoeda(m, d.aEnviar) + '</strong>' +
+        '<span class="kpi-foot">= ' + Calc.brl(d.equivaleBrl) + ' &middot; ' +
+          d.qtd + ' pessoa' + (d.qtd === 1 ? '' : 's') + '</span>' +
+        '</div>';
+    }).join('');
+
+    box.hidden = moedas.length === 0;
+  }
+
   function renderKpis() {
     var s = state.summary;
     var itens = todosItens();
@@ -171,34 +201,16 @@
     App.$('#kpi-setores').textContent = s.sectors.length + ' setor' + (s.sectors.length === 1 ? '' : 'es');
     App.$('#kpi-total-brl').textContent = Calc.brl(s.geral.total);
     App.$('#kpi-custo-diario').textContent = 'Custo diário: ' + Calc.brl(s.geral.diario);
-    App.$('#kpi-total-usd').textContent = Calc.usd(s.geral.dolar);
-    App.$('#kpi-total-usd-taxas').textContent = 'c/ taxa Wise: ' + Calc.usd(s.geral.totalUsd);
-    App.$('#kpi-total-gbp').textContent = Calc.gbp(s.geral.libra);
-    App.$('#kpi-total-gbp-taxas').textContent = 'c/ taxa Wise: ' + Calc.gbp(s.geral.totalGbp);
+    App.$('#kpi-custo-total').textContent = Calc.brl(s.geral.equivaleBrl);
+    App.$('#kpi-custo-total-foot').textContent =
+      'Folha + taxa Wise (' + Calc.num(state.config.taxaWisePct) + '%)';
+    renderKpisMoeda();
 
     var pagos = itens.filter(function (it) { return it.pago; });
     App.$('#kpi-pago').textContent = pagos.length + ' de ' + itens.length;
     App.$('#kpi-pago-valor').textContent = Calc.brl(Calc.calcTotais(pagos, state.config).total) + ' enviados';
     App.$('#kpi-progress').style.width = (itens.length ? (pagos.length / itens.length) * 100 : 0) + '%';
 
-    var el = App.$('#kpi-diferenca');
-    if (!state.quote || !state.quote.usd) {
-      App.$('#kpi-custo-real').textContent = '—';
-      el.className = 'kpi-foot';
-      el.textContent = 'Cotação indisponível';
-    } else if (!s.geral.total) {
-      App.$('#kpi-custo-real').textContent = '—';
-      el.className = 'kpi-foot';
-      el.textContent = 'Sem colaboradores neste mês';
-    } else {
-      var custoReal = s.geral.totalUsd * state.quote.usd;
-      App.$('#kpi-custo-real').textContent = Calc.brl(custoReal);
-      var delta = custoReal - s.geral.total;
-      var pct = (delta / s.geral.total) * 100;
-      el.className = 'kpi-foot delta ' + (delta > 0 ? 'up' : delta < 0 ? 'down' : '');
-      el.textContent = (delta >= 0 ? '+' : '−') + Calc.brl(Math.abs(delta)) +
-        ' (' + (delta >= 0 ? '+' : '−') + Calc.num(Math.abs(pct)) + '%) vs. folha';
-    }
   }
 
   /* ============================================================
@@ -224,14 +236,14 @@
               statusSetor(pagos, sec.itens.length) +
             '</span>' +
             '<div class="sector-stats">' +
+              // o detalhamento por moeda fica no rodape da tabela, onde cabe com folga
               '<span class="sector-stat"><span class="k">Folha</span><span class="v" data-sub="total">' + Calc.brl(sec.totals.total) + '</span></span>' +
-              '<span class="sector-stat"><span class="k">A enviar em US$</span><span class="v usd" data-sub="totalUsd">' + Calc.usd(sec.totals.totalUsd) + '</span></span>' +
-              '<span class="sector-stat"><span class="k">A enviar em £</span><span class="v gbp" data-sub="totalGbp">' + Calc.gbp(sec.totals.totalGbp) + '</span></span>' +
+              '<span class="sector-stat"><span class="k">Custo c/ taxas</span><span class="v" data-sub="custo">' + Calc.brl(sec.totals.equivaleBrl) + '</span></span>' +
             '</div>' +
             '<div class="sector-actions">' +
               (sec.itens.length
                 ? '<button class="btn btn-sm" data-pagar-setor type="button">' +
-                    (todosPagos ? 'Desmarcar setor' : '&#10003; Pagar setor inteiro') + '</button>'
+                    (todosPagos ? 'Desmarcar setor' : App.ico('check', 14) + ' Pagar setor inteiro') + '</button>'
                 : '') +
             '</div>' +
           '</div>' +
@@ -248,7 +260,7 @@
 
   function statusSetor(pagos, total) {
     if (!total) return ' <span class="badge badge-neutral">vazio</span>';
-    if (pagos === total) return ' <span class="badge badge-accent">&#10003; pago</span>';
+    if (pagos === total) return ' <span class="badge badge-accent">' + App.ico('check', 12) + ' pago</span>';
     if (pagos > 0) return ' <span class="badge badge-amber">' + pagos + '/' + total + ' pago</span>';
     return ' <span class="badge badge-neutral">' + total + ' colaborador' + (total === 1 ? '' : 'es') + '</span>';
   }
@@ -261,25 +273,35 @@
       '<th class="col-cargo">Cargo</th>' +
       '<th class="num col-calc sep-l">Total R$</th>' +
       '<th class="num col-calc">Custo di&aacute;rio</th>' +
-      '<th class="num col-calc sep-l">D&oacute;lar</th>' +
-      '<th class="num col-calc">Total US$</th>' +
-      '<th class="num col-calc sep-l">Libra</th>' +
-      '<th class="num col-calc">Total &pound;</th>' +
+      '<th class="col-moeda sep-l">Paga em</th>' +
+      '<th class="num col-enviar">A enviar</th>' +
       '<th class="col-status sep-l">Status</th>' +
       '<th class="col-acao"><span class="sr-only">A&ccedil;&otilde;es</span></th>' +
       '</tr></thead>';
   }
 
+  /** Rodape: uma linha por moeda usada no setor, cada uma com o total em real. */
   function rodape(t) {
-    return '<tfoot><tr>' +
-      '<td colspan="4" class="total-label stick">Total do setor</td>' +
-      '<td class="num" data-tf="total">' + Calc.brl(t.total) + '</td>' +
-      '<td class="num" data-tf="diario">' + Calc.brl(t.diario) + '</td>' +
-      '<td class="num" data-tf="dolar">' + Calc.usd(t.dolar) + '</td>' +
-      '<td class="num calc-usd" data-tf="totalUsd">' + Calc.usd(t.totalUsd) + '</td>' +
-      '<td class="num" data-tf="libra">' + Calc.gbp(t.libra) + '</td>' +
-      '<td class="num calc-gbp" data-tf="totalGbp">' + Calc.gbp(t.totalGbp) + '</td>' +
-      '<td colspan="2"></td>' +
+    var moedas = Calc.moedasEmUso(t);
+    var linhas = moedas.map(function (m) {
+      var d = t.porMoeda[m];
+      return '<tr data-tf-moeda="' + m + '">' +
+        '<td colspan="4" class="total-label stick">A enviar em ' + Calc.MOEDAS[m].nome.toLowerCase() +
+          ' <span class="badge badge-neutral">' + d.qtd + '</span></td>' +
+        '<td class="num" colspan="2">' + Calc.brl(d.equivaleBrl) + '</td>' +
+        '<td class="moeda"><span class="moeda-tag m-' + m + '">' + m + '</span></td>' +
+        '<td class="num m-' + m + '" style="font-weight:700;">' + Calc.fmtMoeda(m, d.aEnviar) + '</td>' +
+        '<td colspan="2"></td>' +
+        '</tr>';
+    }).join('');
+
+    return '<tfoot>' + linhas +
+      '<tr>' +
+        '<td colspan="4" class="total-label stick">Total do setor</td>' +
+        '<td class="num" data-tf="total">' + Calc.brl(t.total) + '</td>' +
+        '<td class="num" data-tf="diario">' + Calc.brl(t.diario) + '</td>' +
+        '<td colspan="2" class="num" data-tf="equivaleBrl">' + Calc.brl(t.equivaleBrl) + ' com taxas</td>' +
+        '<td colspan="2"></td>' +
       '</tr></tfoot>';
   }
 
@@ -293,7 +315,7 @@
     return '<tr data-id="' + it.id + '"' +
         ' class="' + (it.pago ? 'is-pago ' : '') + (aberta ? 'aberta' : '') + '"' +
         ' data-busca="' + esc([it.nome, it.cargo, it.cidade, it.obs].join(' ').toLowerCase()) + '">' +
-      '<td class="exp stick"><button class="btn-exp" data-exp type="button" aria-label="Ver detalhes">&#9654;</button></td>' +
+      '<td class="exp stick"><button class="btn-exp" data-exp type="button" aria-label="Ver detalhes">' + App.ico('seta', 13) + '</button></td>' +
       '<td class="idx">' + (i + 1) + '</td>' +
       '<td><input class="cell nome" data-f="nome" placeholder="Nome" value="' + esc(it.nome) + '"' +
         (it.pago ? ' disabled' : '') + '></td>' +
@@ -301,12 +323,13 @@
         (it.pago ? ' disabled' : '') + '></td>' +
       '<td class="calc calc-total sep-l" data-c="total">R$ 0,00</td>' +
       '<td class="calc calc-diario" data-c="diario">R$ 0,00</td>' +
-      '<td class="calc calc-muted sep-l" data-c="dolar">$0.00</td>' +
-      '<td class="calc calc-usd" data-c="totalUsd">$0.00</td>' +
-      '<td class="calc calc-muted sep-l" data-c="libra">&pound;0.00</td>' +
-      '<td class="calc calc-gbp" data-c="totalGbp">&pound;0.00</td>' +
+      '<td class="moeda sep-l">' + seletorMoeda(it) + '</td>' +
+      '<td class="enviar" data-c-enviar>' +
+        '<div class="enviar-val m-' + Calc.moedaDe(it) + '">&mdash;</div>' +
+        '<div class="enviar-brl">&mdash;</div>' +
+      '</td>' +
       '<td class="sep-l"><button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
-        (it.pago ? '&#10003; Pago' : 'Marcar pago') + '</button></td>' +
+        (it.pago ? App.ico('check', 13) + ' Pago' : 'Marcar pago') + '</button></td>' +
       '<td class="acao"><button class="btn-icon danger" data-del type="button" title="Remover" aria-label="Remover">&times;</button></td>' +
       '</tr>';
   }
@@ -327,8 +350,17 @@
           campoDinheiro('comissao', 'Comissão', it.comissao, d) +
           campoDinheiro('aluguel', 'Aluguel / Outros', it.aluguel, d) +
           campoDinheiro('bonificacao', 'Bonificação', it.bonificacao, d) +
-          '<div class="det-field"><span>Taxa Wise no dólar</span><div class="valor usd" data-c="fee">$0.00</div></div>' +
-          '<div class="det-field"><span>Taxa Wise na libra</span><div class="valor gbp" data-c="feeGbp">&pound;0.00</div></div>' +
+        '</div>' +
+
+        '<div class="det-titulo" style="margin-top:18px;">Quanto daria em cada moeda ' +
+          '<span class="det-nota">(a pessoa recebe na moeda marcada acima)</span></div>' +
+        '<div class="det-grid compacta">' +
+          '<div class="det-field"><span>D&oacute;lar com taxa</span><div class="valor m-USD" data-c="emUsd">$0.00</div></div>' +
+          '<div class="det-field"><span>Taxa Wise (US$)</span><div class="valor" data-c="fee">$0.00</div></div>' +
+          '<div class="det-field"><span>Euro com taxa</span><div class="valor m-EUR" data-c="emEur">&euro;0,00</div></div>' +
+          '<div class="det-field"><span>Taxa Wise (&euro;)</span><div class="valor" data-c="feeEur">&euro;0,00</div></div>' +
+          '<div class="det-field"><span>Libra com taxa</span><div class="valor m-GBP" data-c="emGbp">&pound;0.00</div></div>' +
+          '<div class="det-field"><span>Taxa Wise (&pound;)</span><div class="valor" data-c="feeGbp">&pound;0.00</div></div>' +
         '</div>' +
 
         '<div class="det-titulo" style="margin-top:18px;">Dados do colaborador</div>' +
@@ -339,12 +371,23 @@
           '<div class="det-field" style="grid-column:span 2;"><span>Link do Wise</span><div class="det-wise">' +
             '<input class="input" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
             '<a class="btn btn-sm" data-wise-abrir target="_blank" rel="noopener"' +
-              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>Abrir &#8599;</a>' +
+              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 13) + ' Abrir</a>' +
           '</div></div>' +
           campoTexto('obs', 'Observações', it.obs, d, 'Anotação livre') +
         '</div>' +
 
       '</div></td></tr>';
+  }
+
+  /** Escolha da moeda em que a pessoa recebe -- e daqui que sai o "a enviar". */
+  function seletorMoeda(it) {
+    var atual = Calc.moedaDe(it);
+    var opcoes = Calc.CODIGOS_MOEDA.map(function (m) {
+      return '<option value="' + m + '"' + (m === atual ? ' selected' : '') + '>' +
+        Calc.MOEDAS[m].simbolo + ' ' + m + '</option>';
+    }).join('');
+    return '<select class="moeda-sel m-' + atual + '" data-f="moedaPagamento" ' +
+      'aria-label="Moeda do pagamento"' + (it.pago ? ' disabled' : '') + '>' + opcoes + '</select>';
   }
 
   function campoDinheiro(campo, rotulo, valor, disabled) {
@@ -393,15 +436,26 @@
       var r = Calc.calcItem(it, state.config);
       escreve(tr, 'total', Calc.brl(r.total));
       escreve(tr, 'diario', Calc.brl(r.diario));
-      escreve(tr, 'dolar', Calc.usd(r.dolar));
-      escreve(tr, 'totalUsd', Calc.usd(r.totalUsd));
-      escreve(tr, 'libra', Calc.gbp(r.libra));
-      escreve(tr, 'totalGbp', Calc.gbp(r.totalGbp));
+
+      // o que a CCO manda, na moeda escolhida, e quanto isso custa em real
+      var cel = tr.querySelector('[data-c-enviar]');
+      if (cel) {
+        var val = cel.querySelector('.enviar-val');
+        val.className = 'enviar-val m-' + r.moeda;
+        val.textContent = Calc.fmtMoeda(r.moeda, r.aEnviar);
+        cel.querySelector('.enviar-brl').textContent = '= ' + Calc.brl(r.equivaleBrl);
+      }
+      var sel = tr.querySelector('[data-f="moedaPagamento"]');
+      if (sel) sel.className = 'moeda-sel m-' + r.moeda;
 
       var det = tabela.querySelector('tr[data-det="' + it.id + '"]');
       if (det) {
         escreve(det, 'fee', Calc.usd(r.fee));
+        escreve(det, 'feeEur', Calc.eur(r.feeEur));
         escreve(det, 'feeGbp', Calc.gbp(r.feeGbp));
+        escreve(det, 'emUsd', Calc.usd(r.totalUsd));
+        escreve(det, 'emEur', Calc.eur(r.totalEur));
+        escreve(det, 'emGbp', Calc.gbp(r.totalGbp));
         var link = det.querySelector('[data-wise-abrir]');
         var href = Calc.wiseHref(it.wiseLink);
         if (link) { link.hidden = !href; if (href) link.href = href; }
@@ -411,17 +465,35 @@
     var t = sec.totals;
     escreveTf(tabela, 'total', Calc.brl(t.total));
     escreveTf(tabela, 'diario', Calc.brl(t.diario));
-    escreveTf(tabela, 'dolar', Calc.usd(t.dolar));
-    escreveTf(tabela, 'totalUsd', Calc.usd(t.totalUsd));
-    escreveTf(tabela, 'libra', Calc.gbp(t.libra));
-    escreveTf(tabela, 'totalGbp', Calc.gbp(t.totalGbp));
+    escreveTf(tabela, 'equivaleBrl', Calc.brl(t.equivaleBrl) + ' com taxas');
+
+    // as linhas do rodape por moeda mudam de conjunto quando alguem troca de
+    // moeda -- redesenha o tfoot inteiro em vez de tentar remendar celula a celula
+    var tfoot = tabela.querySelector('tfoot');
+    if (tfoot) {
+      var novo = rodape(t);
+      var atual = tfoot.outerHTML;
+      if (atual !== novo) tfoot.outerHTML = novo;
+    }
 
     var head = document.querySelector('.sector-block[data-sector="' + sec.sectorId + '"] .sector-head');
     if (head) {
-      head.querySelector('[data-sub="total"]').textContent = Calc.brl(t.total);
-      head.querySelector('[data-sub="totalUsd"]').textContent = Calc.usd(t.totalUsd);
-      head.querySelector('[data-sub="totalGbp"]').textContent = Calc.gbp(t.totalGbp);
+      var alvo = head.querySelector('[data-sub="total"]');
+      if (alvo) alvo.textContent = Calc.brl(t.total);
+      var env = head.querySelector('[data-sub="enviar"]');
+      if (env) env.innerHTML = resumoMoedas(t);
+      var custo = head.querySelector('[data-sub="custo"]');
+      if (custo) custo.textContent = Calc.brl(t.equivaleBrl);
     }
+  }
+
+  /** "$1.234,56 · €890,00" -- so as moedas que o setor realmente usa. */
+  function resumoMoedas(t) {
+    var moedas = Calc.moedasEmUso(t);
+    if (!moedas.length) return '<span class="v">&mdash;</span>';
+    return moedas.map(function (m) {
+      return '<span class="v m-' + m + '">' + Calc.fmtMoeda(m, t.porMoeda[m].aEnviar) + '</span>';
+    }).join('<span class="sep-moeda"> · </span>');
   }
 
   function escreve(raiz, chave, texto) {
@@ -459,8 +531,10 @@
   function bindTabela() {
     var box = App.$('#setores-container');
 
+    // `.moeda-sel` precisa entrar aqui: e um <select>, nao casava com .cell e a
+    // troca de moeda nao chegava a ser salva.
     box.addEventListener('input', function (e) {
-      var inp = e.target.closest('.cell, .det-field .input');
+      var inp = e.target.closest('.cell, .det-field .input, .moeda-sel');
       if (!inp || !inp.dataset.f) return;
       var id = idDoCampo(inp);
       var found = acharItem(id);
@@ -715,6 +789,11 @@
       if (v <= 0) { App.toast('A taxa do dólar precisa ser maior que zero.', 'err'); renderConfig(); return; }
       salvarConfig({ taxaConversao: v });
     }));
+    App.$('#taxa-conversao-eur').addEventListener('change', mudouConfig(function (e) {
+      var v = Calc.parseNum(e.target.value);
+      if (v <= 0) { App.toast('A taxa do euro precisa ser maior que zero.', 'err'); renderConfig(); return; }
+      salvarConfig({ taxaConversaoEur: v });
+    }));
     App.$('#taxa-conversao-gbp').addEventListener('change', mudouConfig(function (e) {
       var v = Calc.parseNum(e.target.value);
       if (v <= 0) { App.toast('A taxa da libra precisa ser maior que zero.', 'err'); renderConfig(); return; }
@@ -732,7 +811,9 @@
       var patch = { taxaConversaoAuto: e.target.checked };
       if (e.target.checked && state.quote) {
         if (state.quote.usd > 0) patch.taxaConversao = state.quote.usd;
-        if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
+        if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
+        if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
+      if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
       }
       salvarConfig(patch);
     }));
@@ -740,6 +821,7 @@
       if (!state.quote) { App.toast('Cotação indisponível no momento.', 'err'); return; }
       var patch = {};
       if (state.quote.usd > 0) patch.taxaConversao = state.quote.usd;
+      if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
       if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
       salvarConfig(patch).then(function () {
         App.toast('Taxas do mês atualizadas pela cotação de agora.', 'ok');
@@ -757,6 +839,7 @@
         if (state.config.taxaConversaoAuto) {
           var patch = {};
           if (q.usd > 0) patch.taxaConversao = q.usd;
+          if (q.eur > 0) patch.taxaConversaoEur = q.eur;
           if (q.gbp > 0) patch.taxaConversaoGbp = q.gbp;
           salvarConfig(patch);
         }

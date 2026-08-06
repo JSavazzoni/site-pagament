@@ -18,6 +18,7 @@
       state.eu = data.user;
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
+      App.pintarIcones();
       bindEventos();
       carregarTudo();
     }).catch(function () { location.replace('/login.html'); });

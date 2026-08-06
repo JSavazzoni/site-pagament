@@ -27,12 +27,14 @@
   var nfBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfGBP = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var nfEUR = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfNum = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfRate = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
   function brl(n) { return nfBRL.format(isFinite(n) ? n : 0); }
   function usd(n) { return nfUSD.format(isFinite(n) ? n : 0); }
   function gbp(n) { return nfGBP.format(isFinite(n) ? n : 0); }
+  function eur(n) { return nfEUR.format(isFinite(n) ? n : 0); }
   function num(n) { return nfNum.format(isFinite(n) ? n : 0); }
   function rate(n) { return nfRate.format(isFinite(n) ? n : 0); }
 
@@ -86,12 +88,38 @@
 
   /* ---------------- calculo (config explicito, sem closure) ---------------- */
 
+  /* ---------------- moedas ---------------- */
+
+  var MOEDAS = {
+    BRL: { codigo: 'BRL', simbolo: 'R$', nome: 'Real',  formata: brl, campoTaxa: null },
+    USD: { codigo: 'USD', simbolo: '$',  nome: 'Dólar', formata: usd, campoTaxa: 'taxaConversao' },
+    EUR: { codigo: 'EUR', simbolo: '€',  nome: 'Euro',  formata: eur, campoTaxa: 'taxaConversaoEur' },
+    GBP: { codigo: 'GBP', simbolo: '£',  nome: 'Libra', formata: gbp, campoTaxa: 'taxaConversaoGbp' }
+  };
+  var CODIGOS_MOEDA = ['BRL', 'USD', 'EUR', 'GBP'];
+
+  function moedaDe(it) {
+    var m = it && it.moedaPagamento;
+    return MOEDAS[m] ? m : 'USD';
+  }
+
+  /** Formata um valor no padrao da moeda informada. */
+  function fmtMoeda(codigo, valor) {
+    var m = MOEDAS[codigo] || MOEDAS.USD;
+    return m.formata(valor);
+  }
+
   /**
-   * Dolar e libra sao conversoes INDEPENDENTES do mesmo total em real, cada uma
-   * pela sua propria taxa -- nunca uma derivada da outra por cross rate.
+   * O salario e sempre definido em REAL. Cada moeda estrangeira e uma conversao
+   * INDEPENDENTE desse mesmo total, pela sua propria taxa -- nunca uma derivada
+   * da outra por cross rate.
    *
-   * @param {object} it - { salarioBase, comissao, aluguel, bonificacao }
-   * @param {object} config - { diasUteis, taxaConversao, taxaConversaoGbp, taxaWisePct }
+   * `moedaPagamento` diz em qual delas a pessoa recebe de fato: e dai que saem
+   * `aEnviar` (o que a CCO manda) e `equivaleBrl` (quanto isso custa em real,
+   * ja com a taxa Wise).
+   *
+   * @param {object} it - { salarioBase, comissao, aluguel, bonificacao, moedaPagamento }
+   * @param {object} config - { diasUteis, taxaWisePct, taxaConversao, taxaConversaoEur, taxaConversaoGbp }
    */
   function calcItem(it, config) {
     var c = config || {};
@@ -99,19 +127,43 @@
     var dias = Math.max(1, parseNum(c.diasUteis) || 26);
     var pct = parseNum(c.taxaWisePct) / 100;
 
-    var taxaUsd = parseNum(c.taxaConversao);
-    var dolar = taxaUsd > 0 ? total / taxaUsd : 0;
-    var fee = dolar * pct;
+    function converte(campoTaxa) {
+      var taxa = campoTaxa ? parseNum(c[campoTaxa]) : 0;
+      var valor = taxa > 0 ? total / taxa : 0;
+      return { taxa: taxa, valor: valor, fee: valor * pct, comTaxa: valor + valor * pct };
+    }
 
-    var taxaGbp = parseNum(c.taxaConversaoGbp);
-    var libra = taxaGbp > 0 ? total / taxaGbp : 0;
-    var feeGbp = libra * pct;
+    var u = converte('taxaConversao');
+    var e = converte('taxaConversaoEur');
+    var g = converte('taxaConversaoGbp');
+
+    var moeda = moedaDe(it);
+    var escolhida = moeda === 'USD' ? u : moeda === 'EUR' ? e : moeda === 'GBP' ? g : null;
+
+    // Em real nao ha conversao: a taxa Wise so existe quando se troca de moeda.
+    var aEnviarBruto = escolhida ? escolhida.valor : total;
+    var feeEscolhida = escolhida ? escolhida.fee : 0;
+    var aEnviar = aEnviarBruto + feeEscolhida;
+    // De volta a real pela mesma taxa: total + o que a taxa Wise custa.
+    var equivaleBrl = escolhida ? aEnviar * escolhida.taxa : total;
 
     return {
       total: total, diario: total / dias,
-      dolar: dolar, fee: fee, totalUsd: dolar + fee,
-      libra: libra, feeGbp: feeGbp, totalGbp: libra + feeGbp
+      dolar: u.valor, fee: u.fee, totalUsd: u.comTaxa,
+      euro: e.valor, feeEur: e.fee, totalEur: e.comTaxa,
+      libra: g.valor, feeGbp: g.fee, totalGbp: g.comTaxa,
+      moeda: moeda,
+      aEnviarBruto: aEnviarBruto,
+      feeMoeda: feeEscolhida,
+      aEnviar: aEnviar,
+      equivaleBrl: equivaleBrl
     };
+  }
+
+  function zeraPorMoeda() {
+    var out = {};
+    CODIGOS_MOEDA.forEach(function (m) { out[m] = { aEnviar: 0, fee: 0, equivaleBrl: 0, qtd: 0 }; });
+    return out;
   }
 
   /**
@@ -124,7 +176,10 @@
       salarioBase: 0, comissao: 0, aluguel: 0, bonificacao: 0,
       total: 0, diario: 0,
       dolar: 0, fee: 0, totalUsd: 0,
-      libra: 0, feeGbp: 0, totalGbp: 0
+      euro: 0, feeEur: 0, totalEur: 0,
+      libra: 0, feeGbp: 0, totalGbp: 0,
+      equivaleBrl: 0,
+      porMoeda: zeraPorMoeda()
     };
     list.forEach(function (it) {
       var r = calcItem(it, config);
@@ -134,9 +189,23 @@
       t.bonificacao += parseNum(it.bonificacao);
       t.total += r.total; t.diario += r.diario;
       t.dolar += r.dolar; t.fee += r.fee; t.totalUsd += r.totalUsd;
+      t.euro += r.euro; t.feeEur += r.feeEur; t.totalEur += r.totalEur;
       t.libra += r.libra; t.feeGbp += r.feeGbp; t.totalGbp += r.totalGbp;
+      t.equivaleBrl += r.equivaleBrl;
+
+      var m = t.porMoeda[r.moeda];
+      m.aEnviar += r.aEnviar;
+      m.fee += r.feeMoeda;
+      m.equivaleBrl += r.equivaleBrl;
+      m.qtd += 1;
     });
     return t;
+  }
+
+  /** So as moedas que realmente tem alguem, na ordem de exibicao. */
+  function moedasEmUso(totais) {
+    var pm = (totais && totais.porMoeda) || {};
+    return CODIGOS_MOEDA.filter(function (m) { return pm[m] && pm[m].qtd > 0; });
   }
 
   function wiseHref(v) {
@@ -199,7 +268,8 @@
     cargo: 'cargo', funcao: 'cargo',
     data: 'data',
     obs: 'obs', observacao: 'obs', observacoes: 'obs',
-    wise: 'wise', linkwise: 'wise'
+    wise: 'wise', linkwise: 'wise',
+    moeda: 'moeda', moedapagamento: 'moeda', moedadepagamento: 'moeda'
   };
 
   var NUMERICOS = { salarioBase: 1, comissao: 1, aluguel: 1, bonificacao: 1 };
@@ -216,7 +286,9 @@
   }
 
   return {
-    brl: brl, usd: usd, gbp: gbp, num: num, rate: rate,
+    brl: brl, usd: usd, gbp: gbp, eur: eur, num: num, rate: rate,
+    MOEDAS: MOEDAS, CODIGOS_MOEDA: CODIGOS_MOEDA,
+    moedaDe: moedaDe, fmtMoeda: fmtMoeda, moedasEmUso: moedasEmUso,
     parseNum: parseNum, esc: esc,
     MESES: MESES, labelCompetencia: labelCompetencia, mesAtual: mesAtual, mesAnterior: mesAnterior,
     calcItem: calcItem, calcTotais: calcTotais, wiseHref: wiseHref,

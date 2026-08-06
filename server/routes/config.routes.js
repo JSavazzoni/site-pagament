@@ -36,6 +36,9 @@ router.put('/config/:competencia', requireAuth, requireRole('cco'), async (req, 
   if (body.taxaConversao != null && body.taxaConversao <= 0) {
     return next(badRequest('Taxa de conversao do dolar precisa ser maior que zero.'));
   }
+  if (body.taxaConversaoEur != null && body.taxaConversaoEur <= 0) {
+    return next(badRequest('Taxa de conversao do euro precisa ser maior que zero.'));
+  }
   if (body.taxaConversaoGbp != null && body.taxaConversaoGbp <= 0) {
     return next(badRequest('Taxa de conversao da libra precisa ser maior que zero.'));
   }

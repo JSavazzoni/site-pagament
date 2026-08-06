@@ -37,11 +37,11 @@
         </button>
         <div class="menu-panel" role="menu">
           <button class="menu-item" id="mi-senha" type="button" role="menuitem">
-            <span class="mi-ico">&#128273;</span> Trocar minha senha
+            <span class="mi-ico" data-ico="chave"></span> Trocar minha senha
           </button>
           <div class="menu-sep"></div>
           <button class="menu-item danger" id="mi-sair" type="button" role="menuitem">
-            <span class="mi-ico">&#8594;]</span> Sair
+            <span class="mi-ico" data-ico="sair"></span> Sair
           </button>
         </div>
       </div>
@@ -65,7 +65,7 @@
       <button class="btn btn-sm btn-hoje" id="btn-hoje" type="button" hidden>M&ecirc;s atual</button>
 
       <div class="search">
-        <span class="ico">&#9906;</span>
+        <span class="ico" data-ico="busca"></span>
         <input id="busca" type="search" placeholder="Buscar colaborador..." autocomplete="off">
         <button class="clear" id="busca-clear" type="button" aria-label="Limpar busca">&times;</button>
       </div>
@@ -84,11 +84,11 @@
         </button>
         <div class="menu-panel" role="menu">
           <button class="menu-item" id="mi-copiar" type="button" role="menuitem">
-            <span class="mi-ico">&#8635;</span>
+            <span class="mi-ico" data-ico="voltar"></span>
             <span><strong>Copiar do m&ecirc;s anterior</strong><span class="mi-sub">Traz todos os colaboradores e valores</span></span>
           </button>
           <button class="menu-item" id="mi-import" type="button" role="menuitem">
-            <span class="mi-ico">&#8593;</span>
+            <span class="mi-ico" data-ico="subir"></span>
             <span><strong>Importar planilha (CSV)</strong><span class="mi-sub">Aceita o arquivo do Excel/Sheets</span></span>
           </button>
         </div>
@@ -105,14 +105,14 @@
       <span class="kpi-foot" id="kpi-custo-diario">Custo di&aacute;rio: R$ 0,00</span>
     </div>
     <div class="kpi kpi-accent">
-      <span class="kpi-label">Equivalente em d&oacute;lar</span>
-      <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
-      <span class="kpi-foot" id="kpi-taxa-usada">&mdash;</span>
+      <span class="kpi-label">A enviar</span>
+      <strong class="kpi-value" id="kpi-enviar">&mdash;</strong>
+      <span class="kpi-foot" id="kpi-enviar-foot">&mdash;</span>
     </div>
     <div class="kpi kpi-violet">
-      <span class="kpi-label">Equivalente em libra</span>
-      <strong class="kpi-value" id="kpi-total-gbp">&pound;0.00</strong>
-      <span class="kpi-foot" id="kpi-taxa-usada-gbp">&mdash;</span>
+      <span class="kpi-label">Custo com taxas</span>
+      <strong class="kpi-value" id="kpi-custo-total">R$ 0,00</strong>
+      <span class="kpi-foot" id="kpi-custo-total-foot">Folha + taxa Wise</span>
     </div>
     <div class="kpi kpi-amber">
       <span class="kpi-label">Pagamentos</span>
@@ -128,8 +128,9 @@
   </section>
 
   <div class="chips" aria-label="Par&acirc;metros definidos pela CCO">
-    <span class="chip"><span class="k">D&oacute;lar</span><span class="v" id="chip-taxa">&mdash;</span></span>
-    <span class="chip"><span class="k">Libra</span><span class="v" id="chip-taxa-gbp">&mdash;</span></span>
+    <span class="chip"><span class="k">D&oacute;lar</span><span class="v m-USD" id="chip-taxa">&mdash;</span></span>
+    <span class="chip"><span class="k">Euro</span><span class="v m-EUR" id="chip-taxa-eur">&mdash;</span></span>
+    <span class="chip"><span class="k">Libra</span><span class="v m-GBP" id="chip-taxa-gbp">&mdash;</span></span>
     <span class="chip"><span class="k">Dias &uacute;teis</span><span class="v" id="chip-dias">&mdash;</span></span>
     <span class="chip"><span class="k">Taxa Wise</span><span class="v" id="chip-wise">&mdash;</span></span>
     <span class="chip" style="border-style:dashed;"><span class="k">Definidos pela CCO</span></span>
@@ -149,8 +150,8 @@
             <th class="num col-money" scope="col">Bonifica&ccedil;&atilde;o</th>
             <th class="num col-calc sep-l" scope="col">Total R$</th>
             <th class="num col-calc" scope="col">Custo di&aacute;rio</th>
-            <th class="num col-calc sep-l" scope="col">Em d&oacute;lar</th>
-            <th class="num col-calc" scope="col">Em libra</th>
+            <th class="col-moeda sep-l" scope="col">Paga em</th>
+            <th class="num col-enviar" scope="col">A enviar</th>
             <th class="col-status sep-l" scope="col">Status</th>
             <th class="col-acao" scope="col"><span class="sr-only">A&ccedil;&otilde;es</span></th>
           </tr>
@@ -165,8 +166,7 @@
             <td class="num" id="t-bonificacao">R$ 0,00</td>
             <td class="num" id="t-total">R$ 0,00</td>
             <td class="num" id="t-diario">R$ 0,00</td>
-            <td class="num calc-usd" id="t-dolar">$0.00</td>
-            <td class="num calc-gbp" id="t-libra">&pound;0.00</td>
+            <td class="num" colspan="2" id="t-enviar">&mdash;</td>
             <td colspan="2"></td>
           </tr>
         </tfoot>
@@ -174,15 +174,15 @@
     </div>
 
     <div class="empty" id="empty-folha" hidden>
-      <span class="empty-ico">&#128100;</span>
+      <span class="empty-ico" data-ico="pessoa" data-ico-tam="30"></span>
       <strong>Nenhum colaborador em <span id="empty-mes">&mdash;</span></strong>
       <p>Comece do zero ou traga tudo do m&ecirc;s passado &mdash; nomes, valores e dados, prontos para ajustar.</p>
       <button class="btn btn-primary" id="btn-add-vazio" type="button">+ Adicionar colaborador</button>
-      <button class="btn" id="btn-copiar-vazio" type="button">&#8635; Copiar do m&ecirc;s anterior</button>
+      <button class="btn" id="btn-copiar-vazio" type="button"><span data-ico="voltar"></span> Copiar do m&ecirc;s anterior</button>
     </div>
 
     <div class="empty" id="empty-busca" hidden>
-      <span class="empty-ico">&#9906;</span>
+      <span class="empty-ico" data-ico="busca" data-ico-tam="30"></span>
       <strong>Nada encontrado</strong>
       <p>Nenhum colaborador corresponde &agrave; sua busca.</p>
     </div>
@@ -197,7 +197,7 @@
 
 <div class="modal-backdrop" id="modal-senha">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-senha">
-    <div class="modal-icon">&#128273;</div>
+    <div class="modal-icon" data-ico="chave" data-ico-tam="20"></div>
     <h3 id="t-senha">Trocar senha</h3>
     <p class="hint">Informe a senha atual e escolha uma nova com pelo menos 8 caracteres.</p>
     <form class="modal-form" id="form-senha">
@@ -205,14 +205,14 @@
         <label for="senha-atual">Senha atual</label>
         <div class="pw-wrap">
           <input class="input" id="senha-atual" type="password" autocomplete="current-password" required>
-          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-atual" aria-label="Mostrar senha" tabindex="-1"></button>
         </div>
       </div>
       <div class="field">
         <label for="senha-nova">Nova senha</label>
         <div class="pw-wrap">
           <input class="input" id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
-          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1">&#128065;</button>
+          <button class="pw-toggle" type="button" data-pw-toggle="senha-nova" aria-label="Mostrar senha" tabindex="-1"></button>
         </div>
       </div>
       <p class="error-text" id="senha-error" role="alert"></p>

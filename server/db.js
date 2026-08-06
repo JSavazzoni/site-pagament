@@ -36,7 +36,9 @@ const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
  * Ordem importa -- sempre acrescente no fim.
  */
 const MIGRACOES = [
-  'ALTER TABLE config_mes ADD COLUMN taxa_conversao_gbp REAL NOT NULL DEFAULT 6.5'
+  'ALTER TABLE config_mes ADD COLUMN taxa_conversao_gbp REAL NOT NULL DEFAULT 6.5',
+  'ALTER TABLE config_mes ADD COLUMN taxa_conversao_eur REAL NOT NULL DEFAULT 5.8',
+  "ALTER TABLE folha_itens ADD COLUMN moeda_pagamento TEXT NOT NULL DEFAULT 'USD' CHECK (moeda_pagamento IN ('BRL','USD','EUR','GBP'))"
 ];
 
 function ehColunaDuplicada(err) {
@@ -100,7 +102,8 @@ function createTursoBackend() {
     if (!schemaReady) {
       schemaReady = (async () => {
         try {
-          await client.execute('SELECT taxa_conversao_gbp FROM config_mes LIMIT 1');
+          await client.execute('SELECT taxa_conversao_eur FROM config_mes LIMIT 1');
+          await client.execute('SELECT moeda_pagamento FROM folha_itens LIMIT 1');
           return; // schema e migracoes ja aplicados
         } catch { /* banco novo ou desatualizado: segue para o caminho completo */ }
 

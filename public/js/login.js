@@ -7,6 +7,7 @@
   var caps = App.$('#caps-warn');
 
   App.ligarPwToggles();
+  App.pintarIcones();
 
   // ja logado? pula direto pro dashboard certo
   App.get('/api/auth/me').then(function (data) {

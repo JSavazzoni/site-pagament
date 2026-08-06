@@ -14,14 +14,63 @@
     });
   }
 
+  /* ---------------- icones ----------------
+     SVG de traco, no lugar dos emoji: emoji muda de desenho a cada sistema,
+     nao acompanha a cor do texto e desalinha com a linha de base. */
+
+  var TRACOS = {
+    chave:    '<path d="M15 7a4 4 0 1 1-3.9 5H8v2H6v2H3v-3l5.1-5.1A4 4 0 0 1 15 7Z"/><circle cx="16.5" cy="7.5" r=".6" fill="currentColor"/>',
+    painel:   '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+    sair:     '<path d="M15 17v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2"/><path d="M10 12h11m0 0-3-3m3 3-3 3"/>',
+    engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4Z"/>',
+    subir:    '<path d="M12 19V5m0 0-6 6m6-6 6 6"/>',
+    voltar:   '<path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/>',
+    busca:    '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    pessoa:   '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    predio:   '<path d="M4 21V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15"/><path d="M14 10h4a2 2 0 0 1 2 2v9"/><path d="M2 21h20M7 8h2M7 12h2M7 16h2"/>',
+    prancheta:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h4"/>',
+    check:    '<path d="m4 12 5 5L20 6"/>',
+    alerta:   '<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4m0 3v.5"/>',
+    duvida:   '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4v.3"/><path d="M12 17v.5"/>',
+    dado:     '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>',
+    copiar:   '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    abrir:    '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/>',
+    olho:     '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+    olhoCorte:'<path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.2 6.2A17 17 0 0 0 2 12s3.6 7 10 7c1.6 0 3-.3 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+    lixo:     '<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1L18 7"/>',
+    seta:     '<path d="m9 6 6 6-6 6"/>'
+  };
+
+  /**
+   * Devolve o SVG do icone. Herda a cor do texto (currentColor) e escala com o
+   * tamanho da fonte, entao encaixa em qualquer lugar sem ajuste.
+   */
+  function ico(nome, tamanho) {
+    var d = TRACOS[nome];
+    if (!d) return '';
+    var s = tamanho || 16;
+    return '<svg class="ico" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" ' +
+      'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true" focusable="false">' + d + '</svg>';
+  }
+
+  /** Troca por SVG todo elemento marcado com data-ico="nome". */
+  function pintarIcones(raiz) {
+    $all('[data-ico]', raiz).forEach(function (el) {
+      if (el.dataset.icoFeito) return;
+      el.dataset.icoFeito = '1';
+      el.innerHTML = ico(el.dataset.ico, Number(el.dataset.icoTam) || 16) + el.innerHTML;
+    });
+  }
+
   /* ---------------- toast ---------------- */
 
   var toastTimer = null;
   function toast(msg, kind) {
     var el = $('#toast');
     if (!el) return;
-    var ico = kind === 'ok' ? '✓' : kind === 'err' ? '⚠' : '';
-    el.innerHTML = (ico ? '<span>' + ico + '</span>' : '') + '<span>' + esc(msg) + '</span>';
+    var marca = kind === 'ok' ? ico('check', 15) : kind === 'err' ? ico('alerta', 15) : '';
+    el.innerHTML = marca + '<span>' + esc(msg) + '</span>';
     el.className = 'toast show' + (kind ? ' ' + kind : '');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.className = 'toast'; }, 3400);
@@ -112,7 +161,7 @@
       back.className = 'modal-backdrop show';
       back.innerHTML =
         '<div class="modal" role="dialog" aria-modal="true">' +
-          '<div class="modal-icon' + (o.perigo ? ' danger' : '') + '">' + (o.perigo ? '⚠' : '?') + '</div>' +
+          '<div class="modal-icon' + (o.perigo ? ' danger' : '') + '">' + ico(o.perigo ? 'alerta' : 'duvida', 20) + '</div>' +
           '<h3>' + esc(o.titulo || 'Confirmar') + '</h3>' +
           '<p class="hint" style="margin:6px 0 20px;">' + esc(o.texto || '') + '</p>' +
           '<div class="modal-actions">' +
@@ -285,12 +334,13 @@
     $all('[data-pw-toggle]', root).forEach(function (btn) {
       if (btn.dataset.ligado) return;
       btn.dataset.ligado = '1';
+      btn.innerHTML = ico('olho', 16);
       btn.addEventListener('click', function () {
         var inp = $('#' + btn.getAttribute('data-pw-toggle'));
         if (!inp) return;
         var mostrar = inp.type === 'password';
         inp.type = mostrar ? 'text' : 'password';
-        btn.textContent = mostrar ? '🙈' : '👁';
+        btn.innerHTML = ico(mostrar ? 'olhoCorte' : 'olho', 16);
         btn.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
         inp.focus();
       });
@@ -337,7 +387,7 @@
     montarMonthNav: montarMonthNav, labelMes: labelMes, somaMes: somaMes,
     montarUserMenu: montarUserMenu, ligarPwToggles: ligarPwToggles,
     gerarSenha: gerarSenha, copiar: copiar, iniciais: iniciais, tempoRelativo: tempoRelativo,
-    fecharMenus: fecharMenus,
+    fecharMenus: fecharMenus, ico: ico, pintarIcones: pintarIcones,
     get: function (path) { return api('GET', path); },
     post: function (path, body) { return api('POST', path, body); },
     patch: function (path, body) { return api('PATCH', path, body); },

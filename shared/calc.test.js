@@ -80,6 +80,58 @@ test('libra converte pela propria taxa, independente do dolar', () => {
   assert.ok(close(t.totalGbp, 1632.16), 'soma das libras com taxa');
 });
 
+test('moeda de pagamento define o "a enviar" e o equivalente em real', () => {
+  const config = { diasUteis: 22, taxaWisePct: 1, taxaConversao: 5, taxaConversaoEur: 6, taxaConversaoGbp: 6.25 };
+  const base = { salarioBase: 4500, comissao: 500, aluguel: 50, bonificacao: 0 }; // total 5050
+
+  const emUsd = Calc.calcItem({ ...base, moedaPagamento: 'USD' }, config);
+  assert.equal(emUsd.moeda, 'USD');
+  assert.ok(close(emUsd.aEnviar, 1020.10), 'USD: 5050/5 + 1%');
+  assert.ok(close(emUsd.equivaleBrl, 5100.50), 'USD: custa a folha + 1%');
+
+  const emEur = Calc.calcItem({ ...base, moedaPagamento: 'EUR' }, config);
+  assert.ok(close(emEur.aEnviar, 850.08, 0.01), 'EUR: 5050/6 + 1%');
+  assert.ok(close(emEur.equivaleBrl, 5100.50), 'EUR: mesmo custo em real');
+
+  const emGbp = Calc.calcItem({ ...base, moedaPagamento: 'GBP' }, config);
+  assert.ok(close(emGbp.aEnviar, 816.08), 'GBP: 5050/6,25 + 1%');
+  assert.ok(close(emGbp.equivaleBrl, 5100.50), 'GBP: mesmo custo em real');
+
+  // em real nao ha conversao, logo nao ha taxa Wise
+  const emBrl = Calc.calcItem({ ...base, moedaPagamento: 'BRL' }, config);
+  assert.ok(close(emBrl.aEnviar, 5050), 'BRL: manda o total, sem taxa');
+  assert.ok(close(emBrl.equivaleBrl, 5050), 'BRL: custa exatamente o total');
+
+  // moeda ausente ou invalida cai em USD, nunca quebra
+  assert.equal(Calc.calcItem(base, config).moeda, 'USD');
+  assert.equal(Calc.calcItem({ ...base, moedaPagamento: 'XYZ' }, config).moeda, 'USD');
+
+  // as 3 conversoes continuam disponiveis, independentes entre si
+  assert.ok(close(emUsd.dolar, 1010) && close(emUsd.euro, 841.67, 0.01) && close(emUsd.libra, 808),
+    'as tres moedas convertem do mesmo total, cada uma pela sua taxa');
+});
+
+test('calcTotais separa por moeda de pagamento', () => {
+  const config = { diasUteis: 22, taxaWisePct: 1, taxaConversao: 5, taxaConversaoEur: 6, taxaConversaoGbp: 6.25 };
+  const p = (moedaPagamento) => ({ salarioBase: 5050, moedaPagamento });
+
+  const t = Calc.calcTotais([p('USD'), p('USD'), p('EUR'), p('GBP'), p('BRL')], config);
+
+  assert.deepEqual(Calc.moedasEmUso(t), ['BRL', 'USD', 'EUR', 'GBP'], 'lista so as moedas com gente');
+  assert.equal(t.porMoeda.USD.qtd, 2);
+  assert.equal(t.porMoeda.EUR.qtd, 1);
+  assert.ok(close(t.porMoeda.USD.aEnviar, 2040.20), 'soma so os que recebem em dolar');
+  assert.ok(close(t.porMoeda.EUR.aEnviar, 850.08, 0.01), 'soma so os que recebem em euro');
+  assert.ok(close(t.porMoeda.BRL.aEnviar, 5050), 'em real, sem taxa');
+
+  assert.ok(close(t.total, 25250), 'folha total em real');
+  // 4 pessoas pagam 1% de taxa, 1 (em real) nao paga
+  assert.ok(close(t.equivaleBrl, 25250 + 4 * 50.50), 'custo real = folha + taxa so de quem converte');
+
+  const vazio = Calc.calcTotais([], config);
+  assert.deepEqual(Calc.moedasEmUso(vazio), [], 'sem itens, nenhuma moeda em uso');
+});
+
 test('calcItem nao vaza estado entre chamadas com configs diferentes (regressao do bug de closure)', () => {
   const it = { salarioBase: 5050, comissao: 0, aluguel: 0, bonificacao: 0 };
   const r1 = Calc.calcItem(it, { diasUteis: 26, taxaWisePct: 1, taxaConversao: 5 });

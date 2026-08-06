@@ -134,7 +134,7 @@ router.post('/import', requireAuth, async (req, res, next) => {
 
   for (let r = idxCab + 1; r < linhas.length; r++) {
     const linha = linhas[r];
-    const item = { nome: '', salarioBase: 0, comissao: 0, aluguel: 0, bonificacao: 0, cidade: '', cargo: '', data: '', obs: '', wiseLink: '' };
+    const item = { nome: '', salarioBase: 0, comissao: 0, aluguel: 0, bonificacao: 0, cidade: '', cargo: '', data: '', obs: '', wiseLink: '', moedaPagamento: 'USD' };
     let temDado = false;
     for (const j in mapa) {
       const campo = mapa[j];
@@ -144,6 +144,7 @@ router.post('/import', requireAuth, async (req, res, next) => {
       const destino = campo === 'wise' ? 'wiseLink' : campo;
       item[destino] = Calc.NUMERICOS[campo] ? Calc.parseNum(bruto) : bruto;
       if (campo === 'data') item.data = Calc.normalizarData(bruto);
+      if (campo === 'moeda') item.moedaPagamento = bruto;
       temDado = true;
     }
     if (temDado && item.nome) {
@@ -218,6 +219,7 @@ router.post('/', requireAuth, async (req, res, next) => {
     sectorId, competencia, nome,
     salarioBase: body.salarioBase, comissao: body.comissao, aluguel: body.aluguel, bonificacao: body.bonificacao,
     cidade: body.cidade, cargo: body.cargo, data: body.data, obs: body.obs, wiseLink: body.wiseLink,
+    moedaPagamento: body.moedaPagamento,
     createdBy: req.user.id
   });
   const config = await configRepo.get(competencia);
@@ -272,7 +274,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     payrollRepo.update(item.id, {
       nome: body.nome, salarioBase: body.salarioBase, comissao: body.comissao, aluguel: body.aluguel,
       bonificacao: body.bonificacao, cidade: body.cidade, cargo: body.cargo, data: body.data,
-      obs: body.obs, wiseLink: body.wiseLink
+      obs: body.obs, wiseLink: body.wiseLink, moedaPagamento: body.moedaPagamento
     }),
     configRepo.get(item.competencia)
   ]);
