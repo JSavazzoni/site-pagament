@@ -5,6 +5,7 @@ const payrollRepo = require('../repo/payroll.repo.js');
 const sectorsRepo = require('../repo/sectors.repo.js');
 const configRepo = require('../repo/config.repo.js');
 const csv = require('../csv.js');
+const db = require('../db.js');
 const { requireAuth, requireRole, badRequest, notFound, forbidden } = require('../middleware.js');
 
 const router = express.Router();
@@ -34,8 +35,12 @@ async function loadOwnedItem(req) {
 router.get('/summary', requireAuth, requireRole('cco'), async (req, res, next) => {
   const { competencia } = req.query;
   if (!COMPETENCIA_RE.test(competencia || '')) return next(badRequest('Competencia invalida (use AAAA-MM).'));
-  const config = await configRepo.get(competencia);
-  res.json(await payrollRepo.summary(competencia, config));
+  // as duas leituras nao dependem uma da outra: em serie eram 2 viagens de rede
+  const [config, linhas] = await Promise.all([
+    configRepo.get(competencia),
+    payrollRepo.summaryRows(competencia)
+  ]);
+  res.json(payrollRepo.summaryFromRows(competencia, linhas, config));
 });
 
 router.get('/export.csv', requireAuth, async (req, res, next) => {
@@ -114,12 +119,19 @@ router.post('/import', requireAuth, async (req, res, next) => {
   }
   if (idxCab === -1) return next(badRequest('Nao encontrei a coluna "Nome" no arquivo.'));
 
+  // Monta tudo antes e grava numa unica transacao: um CSV de 200 linhas eram
+  // 200 viagens de rede em serie, e uma falha no meio deixava metade importada.
+  const comandos = [];
   if (req.query.replace === '1') {
     const atuais = await payrollRepo.listBySector(sectorId, competencia);
-    for (const it of atuais) await payrollRepo.remove(it.id);
+    if (atuais.length) {
+      comandos.push({
+        sql: `DELETE FROM folha_itens WHERE id IN (${atuais.map(() => '?').join(',')})`,
+        args: atuais.map((it) => it.id)
+      });
+    }
   }
 
-  let importados = 0;
   for (let r = idxCab + 1; r < linhas.length; r++) {
     const linha = linhas[r];
     const item = { nome: '', salarioBase: 0, comissao: 0, aluguel: 0, bonificacao: 0, cidade: '', cargo: '', data: '', obs: '', wiseLink: '' };
@@ -135,10 +147,15 @@ router.post('/import', requireAuth, async (req, res, next) => {
       temDado = true;
     }
     if (temDado && item.nome) {
-      await payrollRepo.create({ sectorId, competencia, ...item, createdBy: req.user.id });
-      importados += 1;
+      comandos.push({
+        sql: payrollRepo.SQL_INSERT,
+        args: payrollRepo.argsInsert({ sectorId, competencia, ...item, createdBy: req.user.id })
+      });
     }
   }
+
+  const importados = comandos.filter((c) => c.sql === payrollRepo.SQL_INSERT).length;
+  if (comandos.length) await db.batch(comandos);
 
   res.json({ imported: importados });
 });
@@ -165,11 +182,17 @@ router.get('/', requireAuth, async (req, res, next) => {
 
   const sectorId = sectorIdFor(req, req.query.sectorId);
   if (!sectorId) return next(badRequest('Informe sectorId.'));
-  const sector = await sectorsRepo.getById(sectorId);
+
+  // as 3 leituras sao independentes; em serie eram 3 viagens de rede. Se o setor
+  // nao existir, os itens vem vazios de qualquer jeito -- nada vaza.
+  const [sector, config, brutos] = await Promise.all([
+    sectorsRepo.getById(sectorId),
+    configRepo.get(competencia),
+    payrollRepo.listBySector(sectorId, competencia)
+  ]);
   if (!sector) return next(notFound('Setor nao encontrado.'));
 
-  const config = await configRepo.get(competencia);
-  const itens = (await payrollRepo.listBySector(sectorId, competencia)).map((it) => withCalc(it, config));
+  const itens = brutos.map((it) => withCalc(it, config));
   const totals = Calc.calcTotais(itens, config);
 
   res.json({ competencia, sector, config, itens, totals });
@@ -201,14 +224,39 @@ router.post('/', requireAuth, async (req, res, next) => {
   res.status(201).json(withCalc(created, config));
 });
 
+/** Marca/desmarca varios lancamentos numa unica requisicao (botao "pagar setor inteiro"). */
+router.patch('/pago-lote', requireAuth, requireRole('cco'), async (req, res, next) => {
+  const body = req.body || {};
+  const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter(Number.isInteger) : [];
+  if (!ids.length) return next(badRequest('Informe ids (lista de lancamentos).'));
+  if (ids.length > 500) return next(badRequest('Limite de 500 lancamentos por chamada.'));
+
+  const pago = !!body.pago;
+  const atualizados = await payrollRepo.setPagoEmLote(ids, pago);
+  if (!atualizados.length) return next(notFound('Nenhum lancamento encontrado.'));
+
+  // todos da mesma competencia na pratica; busca a config de cada uma so uma vez
+  const competencias = [...new Set(atualizados.map((it) => it.competencia))];
+  const configs = Object.fromEntries(
+    await Promise.all(competencias.map(async (c) => [c, await configRepo.get(c)]))
+  );
+
+  res.json({
+    itens: atualizados.map((it) => withCalc(it, configs[it.competencia])),
+    atualizados: atualizados.length
+  });
+});
+
 router.patch('/:id/pago', requireAuth, requireRole('cco'), async (req, res, next) => {
   const id = Number(req.params.id);
   const item = await payrollRepo.getById(id);
   if (!item) return next(notFound('Lancamento nao encontrado.'));
 
-  const pago = !!(req.body && req.body.pago);
-  const updated = await payrollRepo.setPago(id, pago);
-  const config = await configRepo.get(item.competencia);
+  // a gravacao e a leitura da config sao independentes -- vao juntas
+  const [updated, config] = await Promise.all([
+    payrollRepo.setPago(id, !!(req.body && req.body.pago)),
+    configRepo.get(item.competencia)
+  ]);
   res.json(withCalc(updated, config));
 });
 
@@ -220,12 +268,14 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   }
 
   const body = req.body || {};
-  const updated = await payrollRepo.update(item.id, {
-    nome: body.nome, salarioBase: body.salarioBase, comissao: body.comissao, aluguel: body.aluguel,
-    bonificacao: body.bonificacao, cidade: body.cidade, cargo: body.cargo, data: body.data,
-    obs: body.obs, wiseLink: body.wiseLink
-  });
-  const config = await configRepo.get(item.competencia);
+  const [updated, config] = await Promise.all([
+    payrollRepo.update(item.id, {
+      nome: body.nome, salarioBase: body.salarioBase, comissao: body.comissao, aluguel: body.aluguel,
+      bonificacao: body.bonificacao, cidade: body.cidade, cargo: body.cargo, data: body.data,
+      obs: body.obs, wiseLink: body.wiseLink
+    }),
+    configRepo.get(item.competencia)
+  ]);
   res.json(withCalc(updated, config));
 });
 

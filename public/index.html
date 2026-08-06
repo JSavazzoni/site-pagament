@@ -8,14 +8,6 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E">
 </head>
 <body>
-<script>
-  fetch('/api/auth/me', { credentials: 'include' }).then(function (r) {
-    if (!r.ok) { location.replace('/login.html'); return null; }
-    return r.json();
-  }).then(function (data) {
-    if (!data) return;
-    location.replace(data.user.role === 'cco' ? '/painel.html' : '/setor.html');
-  }).catch(function () { location.replace('/login.html'); });
-</script>
+<script src="/js/entrada.js"></script>
 </body>
 </html>

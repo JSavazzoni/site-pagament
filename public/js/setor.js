@@ -432,7 +432,6 @@
     App.$('#btn-add-vazio').addEventListener('click', addColaborador);
     App.$('#mi-copiar').addEventListener('click', copiarMesAnterior);
     App.$('#btn-copiar-vazio').addEventListener('click', copiarMesAnterior);
-    App.$('#mi-print').addEventListener('click', function () { window.print(); });
 
     App.$('#btn-expandir').addEventListener('click', function () {
       var btn = App.$('#btn-expandir');

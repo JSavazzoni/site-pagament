@@ -65,6 +65,19 @@ function createSqliteBackend() {
     async run(sql, params) {
       const info = db.prepare(sql).run(...(params || []));
       return { lastInsertRowid: Number(info.lastInsertRowid), changes: Number(info.changes) };
+    },
+    /** Local ja e sincrono: o ganho de agrupar e so na rede, mas a interface e a mesma. */
+    async batch(comandos) {
+      const saida = [];
+      db.exec('BEGIN');
+      try {
+        for (const c of comandos) saida.push(db.prepare(c.sql).all(...(c.args || [])));
+        db.exec('COMMIT');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
+      return saida;
     }
   };
 }
@@ -77,9 +90,20 @@ function createTursoBackend() {
   const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 
   let schemaReady = null;
+  /**
+   * Em serverless cada instancia fria repetia todo o DDL + migracoes antes de
+   * responder a primeira requisicao -- varias viagens de rede que o usuario
+   * esperava. Agora uma sondagem barata (1 viagem) confirma que o banco ja esta
+   * na forma esperada e pula o resto; o caminho completo so roda no banco novo.
+   */
   function ensureSchema() {
     if (!schemaReady) {
       schemaReady = (async () => {
+        try {
+          await client.execute('SELECT taxa_conversao_gbp FROM config_mes LIMIT 1');
+          return; // schema e migracoes ja aplicados
+        } catch { /* banco novo ou desatualizado: segue para o caminho completo */ }
+
         await client.executeMultiple(fs.readFileSync(SCHEMA_PATH, 'utf8'));
         for (const sql of MIGRACOES) {
           try { await client.execute(sql); } catch (err) { if (!ehColunaDuplicada(err)) throw err; }
@@ -112,6 +136,18 @@ function createTursoBackend() {
         lastInsertRowid: rs.lastInsertRowid != null ? Number(rs.lastInsertRowid) : 0,
         changes: rs.rowsAffected != null ? Number(rs.rowsAffected) : 0
       };
+    },
+    /**
+     * Varios comandos numa UNICA viagem de rede, em transacao. Faz toda a
+     * diferenca aqui: cada execute() solto e um HTTP separado para o Turso
+     * (~90ms), entao copiar 12 colaboradores em 12 execute() custava ~1s.
+     */
+    async batch(comandos) {
+      const rss = await client.batch(
+        comandos.map((c) => ({ sql: c.sql, args: c.args || [] })),
+        'write'
+      );
+      return rss.map((rs) => rs.rows.map((r) => rowToObject(r, rs.columns)));
     }
   };
 }
@@ -146,7 +182,9 @@ function init() {
 async function all(sql, params) { await init(); return backend.all(sql, params); }
 async function get(sql, params) { await init(); return backend.get(sql, params); }
 async function run(sql, params) { await init(); return backend.run(sql, params); }
+/** @param {{sql:string,args?:any[]}[]} comandos - executados juntos, em transacao */
+async function batch(comandos) { await init(); return backend.batch(comandos); }
 
 function backendName() { return backend ? backend.name : '(nao inicializado)'; }
 
-module.exports = { init, all, get, run, backendName, DbNotConfiguredError };
+module.exports = { init, all, get, run, batch, backendName, DbNotConfiguredError };

@@ -42,47 +42,61 @@ async function listBySector(sectorId, competencia) {
   return rows.map(toPublic);
 }
 
-async function create(data) {
-  const info = await db.run(
-    `INSERT INTO folha_itens
-       (sector_id, competencia, nome, salario_base, comissao, aluguel, bonificacao, cidade, cargo, data, obs, wise_link, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      data.sectorId, data.competencia, data.nome || '',
-      Calc.parseNum(data.salarioBase), Calc.parseNum(data.comissao),
-      Calc.parseNum(data.aluguel), Calc.parseNum(data.bonificacao),
-      data.cidade || '', data.cargo || '', data.data || '', data.obs || '',
-      data.wiseLink || '', data.createdBy || null
-    ]
-  );
-  return getById(info.lastInsertRowid);
+const COLUNAS_INSERT =
+  '(sector_id, competencia, nome, salario_base, comissao, aluguel, bonificacao, cidade, cargo, data, obs, wise_link, created_by)';
+
+/** Argumentos do INSERT na ordem de COLUNAS_INSERT. */
+function argsInsert(data) {
+  return [
+    data.sectorId, data.competencia, data.nome || '',
+    Calc.parseNum(data.salarioBase), Calc.parseNum(data.comissao),
+    Calc.parseNum(data.aluguel), Calc.parseNum(data.bonificacao),
+    data.cidade || '', data.cargo || '', data.data || '', data.obs || '',
+    data.wiseLink || '', data.createdBy || null
+  ];
 }
 
-/** sectorId/competencia/pago sao imutaveis por aqui -- ver setPago() e rotas. */
+/**
+ * RETURNING evita o SELECT de volta: antes era INSERT + SELECT (2 viagens de
+ * rede ate o Turso); agora e uma so. O mesmo vale para update() e setPago().
+ */
+const SQL_INSERT = `INSERT INTO folha_itens ${COLUNAS_INSERT}
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`;
+
+async function create(data) {
+  const rows = await db.all(SQL_INSERT, argsInsert(data));
+  return rows.length ? toPublic(rows[0]) : null;
+}
+
+/**
+ * sectorId/competencia/pago sao imutaveis por aqui -- ver setPago() e rotas.
+ * O COALESCE deixa o "so mexe no que veio no patch" acontecer dentro do proprio
+ * UPDATE, sem precisar ler a linha antes (eram 3 viagens: SELECT, UPDATE, SELECT).
+ */
 async function update(id, patch) {
-  const current = await db.get('SELECT * FROM folha_itens WHERE id = ?', [id]);
-  if (!current) return null;
-  await db.run(
+  const v = (x) => (x != null ? x : null);
+  const n = (x) => (x != null ? Calc.parseNum(x) : null);
+  const rows = await db.all(
     `UPDATE folha_itens SET
-       nome = ?, salario_base = ?, comissao = ?, aluguel = ?, bonificacao = ?,
-       cidade = ?, cargo = ?, data = ?, obs = ?, wise_link = ?,
-       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-     WHERE id = ?`,
+       nome         = COALESCE(?, nome),
+       salario_base = COALESCE(?, salario_base),
+       comissao     = COALESCE(?, comissao),
+       aluguel      = COALESCE(?, aluguel),
+       bonificacao  = COALESCE(?, bonificacao),
+       cidade       = COALESCE(?, cidade),
+       cargo        = COALESCE(?, cargo),
+       data         = COALESCE(?, data),
+       obs          = COALESCE(?, obs),
+       wise_link    = COALESCE(?, wise_link),
+       updated_at   = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id = ? RETURNING *`,
     [
-      patch.nome != null ? patch.nome : current.nome,
-      patch.salarioBase != null ? Calc.parseNum(patch.salarioBase) : current.salario_base,
-      patch.comissao != null ? Calc.parseNum(patch.comissao) : current.comissao,
-      patch.aluguel != null ? Calc.parseNum(patch.aluguel) : current.aluguel,
-      patch.bonificacao != null ? Calc.parseNum(patch.bonificacao) : current.bonificacao,
-      patch.cidade != null ? patch.cidade : current.cidade,
-      patch.cargo != null ? patch.cargo : current.cargo,
-      patch.data != null ? patch.data : current.data,
-      patch.obs != null ? patch.obs : current.obs,
-      patch.wiseLink != null ? patch.wiseLink : current.wise_link,
+      v(patch.nome), n(patch.salarioBase), n(patch.comissao), n(patch.aluguel), n(patch.bonificacao),
+      v(patch.cidade), v(patch.cargo), v(patch.data), v(patch.obs), v(patch.wiseLink),
       id
     ]
   );
-  return getById(id);
+  return rows.length ? toPublic(rows[0]) : null;
 }
 
 async function remove(id) {
@@ -90,11 +104,30 @@ async function remove(id) {
 }
 
 async function setPago(id, pago) {
-  await db.run(
-    "UPDATE folha_itens SET pago = ?, pago_em = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
+  const rows = await db.all(
+    `UPDATE folha_itens SET pago = ?, pago_em = ?,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id = ? RETURNING *`,
     [pago ? 1 : 0, pago ? new Date().toISOString() : null, id]
   );
-  return getById(id);
+  return rows.length ? toPublic(rows[0]) : null;
+}
+
+/**
+ * Marca/desmarca varios lancamentos de uma vez, numa unica viagem de rede.
+ * O painel fazia um PATCH por colaborador ao "pagar setor inteiro" -- 12
+ * colaboradores eram 12 requisicoes em serie.
+ */
+async function setPagoEmLote(ids, pago) {
+  if (!ids.length) return [];
+  const marcas = ids.map(() => '?').join(',');
+  const rows = await db.all(
+    `UPDATE folha_itens SET pago = ?, pago_em = ?,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id IN (${marcas}) RETURNING *`,
+    [pago ? 1 : 0, pago ? new Date().toISOString() : null, ...ids]
+  );
+  return rows.map(toPublic);
 }
 
 /** Copia os itens do mes anterior (ou do mes nao-vazio mais recente antes da competencia) para a competencia atual. */
@@ -126,32 +159,48 @@ async function copyPrevious({ sectorId, competencia, replace, createdBy }) {
   }
   if (!sourceItems.length) return { copied: 0, existing: existing.length };
 
+  // Tudo numa unica viagem de rede e numa unica transacao: se um insert falhar,
+  // nada e gravado -- antes era um DELETE/INSERT por linha, em serie.
+  const comandos = [];
   if (existing.length && replace) {
-    for (const row of existing) await db.run('DELETE FROM folha_itens WHERE id = ?', [row.id]);
-  }
-
-  for (const row of sourceItems) {
-    await create({
-      sectorId, competencia, createdBy,
-      nome: row.nome, salarioBase: row.salario_base, comissao: row.comissao,
-      aluguel: row.aluguel, bonificacao: row.bonificacao,
-      cidade: row.cidade, cargo: row.cargo, data: '', obs: row.obs, wiseLink: row.wise_link
+    comandos.push({
+      sql: `DELETE FROM folha_itens WHERE id IN (${existing.map(() => '?').join(',')})`,
+      args: existing.map((r) => r.id)
     });
   }
+  for (const row of sourceItems) {
+    comandos.push({
+      sql: SQL_INSERT,
+      args: argsInsert({
+        sectorId, competencia, createdBy,
+        nome: row.nome, salarioBase: row.salario_base, comissao: row.comissao,
+        aluguel: row.aluguel, bonificacao: row.bonificacao,
+        cidade: row.cidade, cargo: row.cargo, data: '', obs: row.obs, wiseLink: row.wise_link
+      })
+    });
+  }
+  await db.batch(comandos);
 
   return { copied: sourceItems.length, existing: 0 };
 }
 
-/** Agregado por setor (inclui setores inativos que tenham itens nesta competencia) + total geral. */
-async function summary(competencia, config) {
-  const rows = await db.all(
+/** So a leitura -- separada para poder rodar em paralelo com a busca da config. */
+async function summaryRows(competencia) {
+  return db.all(
     `SELECT f.*, s.name AS sector_name, s.active AS sector_active
      FROM folha_itens f JOIN sectors s ON s.id = f.sector_id
      WHERE f.competencia = ?
      ORDER BY s.name COLLATE NOCASE, f.id`,
     [competencia]
   );
+}
 
+/** Agregado por setor (inclui setores inativos que tenham itens nesta competencia) + total geral. */
+async function summary(competencia, config) {
+  return summaryFromRows(competencia, await summaryRows(competencia), config);
+}
+
+function summaryFromRows(competencia, rows, config) {
   const bySector = new Map();
   rows.forEach((row) => {
     if (!bySector.has(row.sector_id)) {
@@ -179,4 +228,9 @@ async function summary(competencia, config) {
   return { competencia, sectors, geral, totalItens: allItens.length };
 }
 
-module.exports = { getById, listBySector, create, update, remove, setPago, copyPrevious, summary, calcRow };
+module.exports = {
+  getById, listBySector, create, update, remove,
+  setPago, setPagoEmLote, copyPrevious,
+  summary, summaryRows, summaryFromRows, calcRow,
+  SQL_INSERT, argsInsert
+};

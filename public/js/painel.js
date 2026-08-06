@@ -55,10 +55,16 @@
     box.classList.add('is-busy');
     state.carregando = true;
 
+    // A cotacao e informativa (o chip e o KPI de custo real): pedir junto, mas
+    // NAO esperar por ela para pintar a folha -- ela vinha de uma API externa e
+    // segurava a tela inteira quando estava lenta.
+    carregarQuote().then(function () {
+      if (state.summary) renderKpis();
+    });
+
     return Promise.all([
       App.get('/api/config/' + state.competencia),
-      App.get('/api/payroll/summary?competencia=' + state.competencia),
-      carregarQuote()
+      App.get('/api/payroll/summary?competencia=' + state.competencia)
     ]).then(function (r) {
       state.config = r[0];
       state.summary = r[1];
@@ -587,20 +593,23 @@
       if (!sim) return;
       btn.disabled = true;
       btn.textContent = 'Salvando...';
-      var fila = alvos.reduce(function (p, it) {
-        return p.then(function () {
-          return App.patch('/api/payroll/' + it.id + '/pago', { pago: marcar }).then(function (upd) {
-            it.pago = upd.pago;
-            it.pagoEm = upd.pagoEm;
-          });
-        });
-      }, Promise.resolve());
 
-      fila.then(function () {
+      // uma requisicao so para o setor inteiro (era um PATCH por colaborador,
+      // em serie -- 12 pessoas eram 12 idas ao servidor)
+      App.patch('/api/payroll/pago-lote', {
+        ids: alvos.map(function (it) { return it.id; }),
+        pago: marcar
+      }).then(function (r) {
+        var porId = {};
+        r.itens.forEach(function (it) { porId[it.id] = it; });
+        alvos.forEach(function (it) {
+          var upd = porId[it.id];
+          if (upd) { it.pago = upd.pago; it.pagoEm = upd.pagoEm; }
+        });
         renderSetores();
         recalcTudoLocal();
         aplicarBusca();
-        App.toast(alvos.length + ' lançamento(s) atualizados.', 'ok');
+        App.toast(r.atualizados + ' lançamento(s) atualizados.', 'ok');
       }).catch(function (e) {
         App.toast(e.message, 'err');
         carregarTudo();
@@ -767,7 +776,6 @@
       busca.value = ''; state.busca = ''; aplicarBusca(); busca.focus();
     });
 
-    App.$('#btn-print').addEventListener('click', function () { window.print(); });
 
     App.$('#btn-expandir').addEventListener('click', function () {
       var algumFechado = App.$all('.sector-block:not(.open)').length > 0;
