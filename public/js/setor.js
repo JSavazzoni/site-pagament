@@ -110,6 +110,7 @@
       '<td class="enviar" data-c-enviar>' +
         '<div class="enviar-val m-' + Calc.moedaDe(it) + '">&mdash;</div>' +
         '<div class="enviar-brl">&mdash;</div>' +
+        '<div class="enviar-alt" data-c-enviar-alt></div>' +
       '</td>' +
       '<td class="sep-l">' + (t
         ? '<span class="badge badge-accent">' + App.ico('check', 12) + ' Pago</span>'
@@ -137,8 +138,8 @@
             '<input class="input" type="date" data-f="data" value="' + esc(it.data) + '"' + d + '></div>' +
           '<div class="det-field" style="grid-column:span 2;"><span>Link do Wise</span><div class="det-wise">' +
             '<input class="input" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
-            '<a class="btn btn-sm" data-wise-abrir target="_blank" rel="noopener"' +
-              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 13) + ' Abrir</a>' +
+            '<a class="btn-wise" data-wise-abrir target="_blank" rel="noopener"' +
+              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 12) + ' Abrir</a>' +
           '</div></div>' +
           campoTexto('obs', 'Observações', it.obs, d, 'Anotação livre') +
         '</div>' +
@@ -196,6 +197,11 @@
         val.className = 'enviar-val m-' + r.moeda;
         val.textContent = Calc.fmtMoeda(r.moeda, r.aEnviar);
         cel.querySelector('.enviar-brl').textContent = '= ' + Calc.brl(r.equivaleBrl);
+        var alt = cel.querySelector('[data-c-enviar-alt]');
+        if (alt) {
+          alt.textContent = r.moeda === 'USD' ? Calc.gbp(r.libra) : '';
+          alt.style.display = r.moeda === 'USD' ? 'block' : 'none';
+        }
       }
       var tag = tr.querySelector('.moeda-tag');
       if (tag) { tag.className = 'moeda-tag m-' + r.moeda; tag.textContent = r.moeda; }

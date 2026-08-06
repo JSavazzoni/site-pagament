@@ -26,7 +26,7 @@ async function ensure(competencia) {
          (competencia, dias_uteis, taxa_wise_pct, taxa_conversao, taxa_conversao_eur, taxa_conversao_gbp, taxa_conversao_auto)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [competencia, DEFAULTS.diasUteis, DEFAULTS.taxaWisePct, DEFAULTS.taxaConversao,
-        DEFAULTS.taxaConversaoGbp, DEFAULTS.taxaConversaoAuto]
+        DEFAULTS.taxaConversaoEur, DEFAULTS.taxaConversaoGbp, DEFAULTS.taxaConversaoAuto]
     );
     row = await db.get('SELECT * FROM config_mes WHERE competencia = ?', [competencia]);
   }

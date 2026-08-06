@@ -327,9 +327,14 @@
       '<td class="enviar" data-c-enviar>' +
         '<div class="enviar-val m-' + Calc.moedaDe(it) + '">&mdash;</div>' +
         '<div class="enviar-brl">&mdash;</div>' +
+        '<div class="enviar-alt" data-c-enviar-alt></div>' +
       '</td>' +
-      '<td class="sep-l"><button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
-        (it.pago ? App.ico('check', 13) + ' Pago' : 'Marcar pago') + '</button></td>' +
+      '<td class="sep-l"><div class="status-acoes">' +
+        '<button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
+          (it.pago ? App.ico('check', 13) + ' Pago' : 'Marcar pago') + '</button>' +
+        '<a class="btn-wise" data-wise-pagar href="https://wise.com" target="_blank" rel="noopener" title="Pagar com Wise em nova aba">' +
+          App.ico('abrir', 12) + ' Wise</a>' +
+      '</div></td>' +
       '<td class="acao"><button class="btn-icon danger" data-del type="button" title="Remover" aria-label="Remover">&times;</button></td>' +
       '</tr>';
   }
@@ -370,8 +375,8 @@
             '<input class="input" type="date" data-f="data" value="' + esc(it.data) + '"' + d + '></div>' +
           '<div class="det-field" style="grid-column:span 2;"><span>Link do Wise</span><div class="det-wise">' +
             '<input class="input" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
-            '<a class="btn btn-sm" data-wise-abrir target="_blank" rel="noopener"' +
-              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 13) + ' Abrir</a>' +
+            '<a class="btn-wise" data-wise-abrir target="_blank" rel="noopener"' +
+              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>' + App.ico('abrir', 12) + ' Abrir</a>' +
           '</div></div>' +
           campoTexto('obs', 'Observações', it.obs, d, 'Anotação livre') +
         '</div>' +
@@ -444,6 +449,11 @@
         val.className = 'enviar-val m-' + r.moeda;
         val.textContent = Calc.fmtMoeda(r.moeda, r.aEnviar);
         cel.querySelector('.enviar-brl').textContent = '= ' + Calc.brl(r.equivaleBrl);
+        var alt = cel.querySelector('[data-c-enviar-alt]');
+        if (alt) {
+          alt.textContent = r.moeda === 'USD' ? Calc.gbp(r.libra) : '';
+          alt.style.display = r.moeda === 'USD' ? 'block' : 'none';
+        }
       }
       var sel = tr.querySelector('[data-f="moedaPagamento"]');
       if (sel) sel.className = 'moeda-sel m-' + r.moeda;
@@ -631,14 +641,19 @@
     var found = acharItem(id);
     if (!found) return;
 
+    var container = btn.closest('.status-acoes');
+    if (container) container.classList.add('is-loading');
     btn.disabled = true;
+
     App.patch('/api/payroll/' + id + '/pago', { pago: !found.item.pago }).then(function (upd) {
       found.item.pago = upd.pago;
       found.item.pagoEm = upd.pagoEm;
       renderSetores();
       recalcTudoLocal();
       aplicarBusca();
+      App.toast(upd.pago ? 'Pagamento confirmado.' : 'Pagamento desmarcado.', 'ok');
     }).catch(function (e) {
+      if (container) container.classList.remove('is-loading');
       btn.disabled = false;
       App.toast(e.message, 'err');
     });
@@ -666,6 +681,8 @@
     }).then(function (sim) {
       if (!sim) return;
       btn.disabled = true;
+      btn.classList.add('is-loading');
+      var textoOriginal = btn.textContent;
       btn.textContent = 'Salvando...';
 
       // uma requisicao so para o setor inteiro (era um PATCH por colaborador,
@@ -687,6 +704,10 @@
       }).catch(function (e) {
         App.toast(e.message, 'err');
         carregarTudo();
+      }).then(function () {
+        btn.disabled = false;
+        btn.classList.remove('is-loading');
+        btn.textContent = textoOriginal;
       });
     });
   }
@@ -812,8 +833,7 @@
       if (e.target.checked && state.quote) {
         if (state.quote.usd > 0) patch.taxaConversao = state.quote.usd;
         if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
-        if (state.quote.eur > 0) patch.taxaConversaoEur = state.quote.eur;
-      if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
+        if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
       }
       salvarConfig(patch);
     }));
