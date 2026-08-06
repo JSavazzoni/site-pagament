@@ -59,9 +59,27 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.text({ type: ['text/csv', 'text/plain'], limit: '2mb' }));
 app.use(cookieParser);
 
+/**
+ * Sonda sem banco: mede o custo puro de chamar a funcao (rede + cold start),
+ * separado do custo de falar com o banco. A diferenca para /api/db-ping diz
+ * quanto do tempo e distancia ate o Turso.
+ */
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, regiao: process.env.VERCEL_REGION || 'local', em: new Date().toISOString() });
+});
+
 // garante schema/conexao antes das rotas de API; se o banco nao estiver
 // configurado (Vercel sem Turso), vira um 503 explicativo em vez de 500
 app.use('/api', ensureDb);
+
+/** Mesma sonda, mas indo ao banco: /api/health + 1 consulta trivial. */
+app.get('/api/db-ping', async (req, res, next) => {
+  try {
+    const ini = Date.now();
+    await require('./db.js').get('SELECT 1 AS ok');
+    res.json({ ok: true, bancoMs: Date.now() - ini, regiao: process.env.VERCEL_REGION || 'local' });
+  } catch (e) { next(e); }
+});
 
 app.use('/api/auth', authRoutes.router);
 app.use('/api/sectors', sectorsRoutes);
@@ -71,8 +89,17 @@ app.use('/api/payroll', payrollRoutes);
 
 // No Vercel, o CDN serve public/ direto (nem chega aqui); estas montagens
 // atendem o modo local e, em producao, o /shared/calc.js e eventuais misses.
-app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// /shared NAO esta em public/, entao passa pela funcao e precisa do
+// Cache-Control aqui -- o do vercel.json so alcanca o que a borda serve.
+const CACHE_ASSET = 'public, max-age=60, stale-while-revalidate=86400';
+app.use('/shared', express.static(path.join(__dirname, '..', 'shared'), {
+  setHeaders: (res) => res.setHeader('Cache-Control', CACHE_ASSET)
+}));
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders: (res, arquivo) => {
+    if (!/\.html$/i.test(arquivo)) res.setHeader('Cache-Control', CACHE_ASSET);
+  }
+}));
 
 app.use(errorHandler);
 
