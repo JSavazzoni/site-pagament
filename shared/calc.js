@@ -26,11 +26,13 @@
 
   var nfBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var nfGBP = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfNum = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nfRate = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
   function brl(n) { return nfBRL.format(isFinite(n) ? n : 0); }
   function usd(n) { return nfUSD.format(isFinite(n) ? n : 0); }
+  function gbp(n) { return nfGBP.format(isFinite(n) ? n : 0); }
   function num(n) { return nfNum.format(isFinite(n) ? n : 0); }
   function rate(n) { return nfRate.format(isFinite(n) ? n : 0); }
 
@@ -85,17 +87,31 @@
   /* ---------------- calculo (config explicito, sem closure) ---------------- */
 
   /**
+   * Dolar e libra sao conversoes INDEPENDENTES do mesmo total em real, cada uma
+   * pela sua propria taxa -- nunca uma derivada da outra por cross rate.
+   *
    * @param {object} it - { salarioBase, comissao, aluguel, bonificacao }
-   * @param {object} config - { diasUteis, taxaConversao, taxaWisePct }
+   * @param {object} config - { diasUteis, taxaConversao, taxaConversaoGbp, taxaWisePct }
    */
   function calcItem(it, config) {
     var c = config || {};
     var total = parseNum(it.salarioBase) + parseNum(it.comissao) + parseNum(it.aluguel) + parseNum(it.bonificacao);
     var dias = Math.max(1, parseNum(c.diasUteis) || 26);
-    var taxa = parseNum(c.taxaConversao);
-    var dolar = taxa > 0 ? total / taxa : 0;
-    var fee = dolar * (parseNum(c.taxaWisePct) / 100);
-    return { total: total, diario: total / dias, dolar: dolar, fee: fee, totalUsd: dolar + fee };
+    var pct = parseNum(c.taxaWisePct) / 100;
+
+    var taxaUsd = parseNum(c.taxaConversao);
+    var dolar = taxaUsd > 0 ? total / taxaUsd : 0;
+    var fee = dolar * pct;
+
+    var taxaGbp = parseNum(c.taxaConversaoGbp);
+    var libra = taxaGbp > 0 ? total / taxaGbp : 0;
+    var feeGbp = libra * pct;
+
+    return {
+      total: total, diario: total / dias,
+      dolar: dolar, fee: fee, totalUsd: dolar + fee,
+      libra: libra, feeGbp: feeGbp, totalGbp: libra + feeGbp
+    };
   }
 
   /**
@@ -106,7 +122,9 @@
     var list = itens || [];
     var t = {
       salarioBase: 0, comissao: 0, aluguel: 0, bonificacao: 0,
-      total: 0, diario: 0, dolar: 0, fee: 0, totalUsd: 0
+      total: 0, diario: 0,
+      dolar: 0, fee: 0, totalUsd: 0,
+      libra: 0, feeGbp: 0, totalGbp: 0
     };
     list.forEach(function (it) {
       var r = calcItem(it, config);
@@ -116,6 +134,7 @@
       t.bonificacao += parseNum(it.bonificacao);
       t.total += r.total; t.diario += r.diario;
       t.dolar += r.dolar; t.fee += r.fee; t.totalUsd += r.totalUsd;
+      t.libra += r.libra; t.feeGbp += r.feeGbp; t.totalGbp += r.totalGbp;
     });
     return t;
   }
@@ -197,7 +216,7 @@
   }
 
   return {
-    brl: brl, usd: usd, num: num, rate: rate,
+    brl: brl, usd: usd, gbp: gbp, num: num, rate: rate,
     parseNum: parseNum, esc: esc,
     MESES: MESES, labelCompetencia: labelCompetencia, mesAtual: mesAtual, mesAnterior: mesAnterior,
     calcItem: calcItem, calcTotais: calcTotais, wiseHref: wiseHref,

@@ -51,6 +51,35 @@ test('calcItem/calcTotais batem com a planilha real (config explicito, sem closu
   assert.ok(close(t.totalUsd, 3141.10), 'total c/ taxas');
 });
 
+test('libra converte pela propria taxa, independente do dolar', () => {
+  const config = { diasUteis: 22, taxaWisePct: 1, taxaConversao: 5, taxaConversaoGbp: 6.25 };
+  const it = { salarioBase: 4500, comissao: 500, aluguel: 50, bonificacao: 0 };
+  const r = Calc.calcItem(it, config);
+
+  assert.ok(close(r.total, 5050), 'total em real');
+  assert.ok(close(r.dolar, 1010), 'dolar = 5050 / 5');
+  assert.ok(close(r.libra, 808), 'libra = 5050 / 6,25');
+  assert.ok(close(r.feeGbp, 8.08), 'taxa Wise de 1% sobre a libra');
+  assert.ok(close(r.totalGbp, 816.08), 'total em libra com taxa');
+
+  // trocar so a taxa da libra nao pode mexer no dolar (e vice-versa)
+  const r2 = Calc.calcItem(it, { ...config, taxaConversaoGbp: 6.5 });
+  assert.ok(close(r2.dolar, 1010), 'dolar intocado ao mudar a taxa da libra');
+  assert.ok(close(r2.libra, 5050 / 6.5, 0.01), 'libra segue a taxa nova');
+
+  const r3 = Calc.calcItem(it, { ...config, taxaConversao: 5.5 });
+  assert.ok(close(r3.libra, 808), 'libra intocada ao mudar a taxa do dolar');
+
+  // sem taxa da libra configurada, o valor e 0 -- nunca herda o do dolar
+  const semGbp = Calc.calcItem(it, { diasUteis: 22, taxaWisePct: 1, taxaConversao: 5 });
+  assert.equal(semGbp.libra, 0, 'sem taxa da libra o resultado e zero');
+  assert.ok(close(semGbp.dolar, 1010), 'dolar continua valendo');
+
+  const t = Calc.calcTotais([it, it], config);
+  assert.ok(close(t.libra, 1616), 'soma das libras');
+  assert.ok(close(t.totalGbp, 1632.16), 'soma das libras com taxa');
+});
+
 test('calcItem nao vaza estado entre chamadas com configs diferentes (regressao do bug de closure)', () => {
   const it = { salarioBase: 5050, comissao: 0, aluguel: 0, bonificacao: 0 };
   const r1 = Calc.calcItem(it, { diasUteis: 26, taxaWisePct: 1, taxaConversao: 5 });

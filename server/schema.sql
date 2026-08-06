@@ -39,11 +39,14 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
+-- Dolar e libra tem cada um a sua taxa; taxa_conversao_auto vale para as duas
+-- (marcar "seguir a cotacao ao vivo" sincroniza ambas).
 CREATE TABLE IF NOT EXISTS config_mes (
   competencia          TEXT PRIMARY KEY CHECK (competencia GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]'),
   dias_uteis           INTEGER NOT NULL DEFAULT 26 CHECK (dias_uteis BETWEEN 1 AND 31),
   taxa_wise_pct        REAL    NOT NULL DEFAULT 1  CHECK (taxa_wise_pct >= 0),
   taxa_conversao       REAL    NOT NULL DEFAULT 5  CHECK (taxa_conversao > 0),
+  taxa_conversao_gbp   REAL    NOT NULL DEFAULT 6.5 CHECK (taxa_conversao_gbp > 0),
   taxa_conversao_auto  INTEGER NOT NULL DEFAULT 0  CHECK (taxa_conversao_auto IN (0,1)),
   updated_by           INTEGER REFERENCES users(id) ON DELETE SET NULL,
   updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))

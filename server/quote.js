@@ -25,23 +25,28 @@ function fetchTimeout(url, ms) {
 
 async function fetchLive() {
   try {
-    const d = await fetchTimeout('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL');
+    const d = await fetchTimeout('https://economia.awesomeapi.com.br/last/USD-BRL,GBP-BRL,EUR-BRL');
     if (!d.USDBRL) throw new Error('resposta inesperada da AwesomeAPI');
     return {
       usd: parseFloat(d.USDBRL.bid),
+      gbp: d.GBPBRL ? parseFloat(d.GBPBRL.bid) : 0,
       eur: d.EURBRL ? parseFloat(d.EURBRL.bid) : 0,
       usdVar: parseFloat(d.USDBRL.pctChange) || 0,
+      gbpVar: d.GBPBRL ? (parseFloat(d.GBPBRL.pctChange) || 0) : 0,
       eurVar: d.EURBRL ? (parseFloat(d.EURBRL.pctChange) || 0) : 0,
       at: new Date().toISOString(),
       source: 'AwesomeAPI'
     };
   } catch {
+    // Fallback devolve USD como base: BRL por libra = (BRL/USD) / (GBP/USD).
     const d = await fetchTimeout('https://open.er-api.com/v6/latest/USD');
     if (!d.rates || !d.rates.BRL) throw new Error('resposta inesperada da exchangerate-api');
     return {
       usd: d.rates.BRL,
+      gbp: d.rates.GBP ? d.rates.BRL / d.rates.GBP : 0,
       eur: d.rates.EUR ? d.rates.BRL / d.rates.EUR : 0,
       usdVar: 0,
+      gbpVar: 0,
       eurVar: 0,
       at: new Date().toISOString(),
       source: 'exchangerate-api'
@@ -57,7 +62,7 @@ async function getQuote(force) {
     cache = { data, at: Date.now() };
     // sync lazy: aplica em toda competencia com taxa automatica ligada.
     // Nao pode derrubar a requisicao da cotacao se o banco falhar.
-    try { await configRepo.syncAutoRates(data.usd); } catch (err) {
+    try { await configRepo.syncAutoRates(data.usd, data.gbp); } catch (err) {
       console.error('Falha ao aplicar cotacao automatica:', err.message);
     }
     return data;

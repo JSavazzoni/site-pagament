@@ -35,6 +35,11 @@
   --amber-dim:  #33280a;
   --amber-line: #5c4413;
 
+  /* libra: violeta, para nunca ser confundida com o verde do dolar */
+  --violet:      #a78bfa;
+  --violet-dim:  #1e1733;
+  --violet-line: #3b2f66;
+
   --red:      #f87171;
   --red-dim:  #341414;
   --red-line: #592424;
@@ -248,23 +253,6 @@ p { color: var(--ink-2); }
 .search .clear:hover { color: var(--ink); background: var(--surface-4); }
 .search input:placeholder-shown ~ .clear { display: none; }
 
-/* controle segmentado (modo de exibicao da tabela) */
-.seg {
-  display: inline-flex; flex: none;
-  background: var(--surface-2);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-}
-.seg-btn {
-  border: 0; background: transparent;
-  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3);
-  padding: 5px 12px; border-radius: 6px; cursor: pointer; white-space: nowrap;
-  transition: background .12s, color .12s;
-}
-.seg-btn:hover { color: var(--ink); }
-.seg-btn.active { background: var(--surface-4); color: var(--ink); box-shadow: var(--shadow-sm); }
-
 /* chip de cotacao ao vivo */
 .quote-chip {
   display: inline-flex; align-items: center; gap: 8px; flex: none;
@@ -273,6 +261,10 @@ p { color: var(--ink-2); }
   font-size: 12.5px; color: var(--ink-2);
 }
 .quote-chip .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); flex: none; }
+.quote-chip .par { display: inline-flex; align-items: baseline; gap: 5px; }
+.quote-chip .par + .par { padding-left: 9px; border-left: 1px solid var(--line-2); }
+.quote-chip .moeda { color: var(--ink-4); font-size: 11px; font-weight: 700; }
+.quote-chip .moeda.gbp { color: var(--violet); }
 .quote-chip .val { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
 .quote-chip .ago { color: var(--ink-4); font-size: 11px; }
 .quote-chip button {
@@ -469,6 +461,8 @@ select.input { cursor: pointer; }
 .kpi-accent .kpi-value { color: var(--accent-hi); }
 .kpi-blue::before { background: var(--blue); }
 .kpi-amber::before { background: var(--amber); }
+.kpi-violet::before { background: var(--violet); }
+.kpi-violet .kpi-value { color: var(--violet); }
 
 .delta.up   { color: var(--red); font-weight: 600; }
 .delta.down { color: var(--accent-hi); font-weight: 600; }
@@ -489,6 +483,7 @@ select.input { cursor: pointer; }
 .badge-accent { background: var(--accent-dim); color: var(--accent-hi); box-shadow: inset 0 0 0 1px var(--accent-line); }
 .badge-blue   { background: var(--blue-dim); color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue-line); }
 .badge-amber  { background: var(--amber-dim); color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber-line); }
+.badge-violet { background: var(--violet-dim); color: var(--violet); box-shadow: inset 0 0 0 1px var(--violet-line); }
 .badge-red    { background: var(--red-dim); color: var(--red); box-shadow: inset 0 0 0 1px var(--red-line); }
 .badge-neutral{ background: var(--surface-3); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-2); }
 
@@ -559,7 +554,10 @@ select.input { cursor: pointer; }
   background: var(--surface-3);
   color: var(--ink-3);
   font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-  text-align: left; padding: 9px 10px; white-space: nowrap;
+  text-align: left; padding: 8px 9px;
+  /* o titulo quebra em duas linhas em vez de forcar a coluna a ficar larga --
+     assim nenhuma celula de dado precisa ser espremida por causa do cabecalho */
+  white-space: normal; line-height: 1.25; vertical-align: bottom;
   border-bottom: 1px solid var(--line-2);
 }
 .grid thead th.num { text-align: right; }
@@ -584,6 +582,9 @@ select.input { cursor: pointer; }
 .grid .col-money { min-width: 106px; }
 .grid .col-calc  { min-width: 112px; }
 .grid .col-txt   { min-width: 106px; }
+/* cargo cabe inteiro: "Coordenadora de Operacoes" e "Engenheira de Software"
+   sao os casos reais mais longos -- medido, nao chutado */
+.grid .col-cargo { min-width: 208px; }
 .grid .col-data  { min-width: 118px; }
 .grid .col-obs   { min-width: 112px; }
 .grid .col-wise  { min-width: 132px; }
@@ -634,6 +635,7 @@ select.input { cursor: pointer; }
 .grid td.calc-total  { color: var(--blue); }
 .grid td.calc-diario { color: var(--amber); }
 .grid td.calc-usd    { color: var(--accent-hi); }
+.grid td.calc-gbp    { color: var(--violet); }
 .grid td.calc-muted  { color: var(--ink-3); font-weight: 500; }
 
 .grid tfoot td {
@@ -647,6 +649,7 @@ select.input { cursor: pointer; }
 .grid tfoot td.num  { text-align: right; }
 .grid tfoot td.calc { text-align: right; }
 .grid tfoot td.calc-usd { color: var(--accent-hi); }
+.grid tfoot td.calc-gbp { color: var(--violet); }
 .grid tfoot .total-label {
   text-align: left; text-transform: uppercase;
   font-size: 10.5px; letter-spacing: .07em; color: var(--ink-3);
@@ -656,19 +659,56 @@ select.input { cursor: pointer; }
 .num { text-align: right; }
 tr.filtered-out { display: none; }
 
-/* Modo "Pagamento" (painel da CCO): esconde as colunas de detalhe (composicao do
-   salario, cadastro) e deixa so o que ela precisa para pagar -- cabe na tela sem
-   rolagem lateral. Modo "Valores" (setor do gestor): mesma ideia para digitacao. */
-.grid.modo-pagamento { min-width: 720px; }
-.grid.modo-pagamento .det { display: none; }
-/* Com poucas colunas sobra muito espaco; sem isso ele ia todo para o nome e
-   abria um vao enorme ate os valores. Divide entre nome e link do Wise (que
-   guarda uma URL e aproveita a largura). */
-.grid.modo-pagamento .col-nome { width: 34%; }
-.grid.modo-pagamento .col-wise { width: 26%; }
-.grid.modo-pagamento .col-calc { min-width: 128px; }
-.grid.modo-valores { min-width: 820px; }
-.grid.modo-valores .cad { display: none; }
+/* ---------------- linha expansivel (detalhes) ----------------
+   A tabela mostra so o essencial, com folga. O resto abre numa faixa embaixo
+   da linha, em campos rotulados de tamanho decente -- e o que evita ter 18
+   colunas espremidas e texto cortado no meio. */
+
+.grid .col-exp { width: 34px; }
+.grid td.exp { text-align: center; padding: 0; }
+
+.btn-exp {
+  width: 24px; height: 24px; padding: 0;
+  display: grid; place-items: center;
+  background: transparent; border: 1px solid transparent; border-radius: var(--radius-xs);
+  color: var(--ink-4); font-size: 10px; line-height: 1; cursor: pointer;
+  transition: transform .18s, color .12s, background .12s;
+}
+.btn-exp:hover { color: var(--ink); background: var(--surface-4); }
+tr.aberta .btn-exp { transform: rotate(90deg); color: var(--accent); }
+
+tr.det-row > td { padding: 0; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+tr.det-row.escondida { display: none; }
+
+.det-panel {
+  padding: 16px 18px 18px calc(34px + 38px + 18px);
+  border-left: 2px solid var(--accent-line);
+}
+.det-titulo {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 12px;
+}
+.det-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 18px; }
+.det-grid.compacta { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.det-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.det-field > span { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.det-field .input { padding: 8px 10px; font-size: 13px; }
+.det-field .input.money { text-align: right; font-variant-numeric: tabular-nums; }
+.det-field .valor {
+  padding: 8px 0; font-size: 14px; font-weight: 650;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.det-field .valor.usd { color: var(--accent-hi); }
+.det-field .valor.gbp { color: var(--violet); }
+
+.det-wise { display: flex; gap: 6px; align-items: center; }
+.det-wise .input { flex: 1; min-width: 0; }
+.det-wise .btn { flex: none; }
+
+@media (max-width: 720px) {
+  .det-panel { padding: 14px; border-left-width: 3px; }
+}
+
 
 /* Limita a largura para o campo e a setinha de abrir ficarem juntos: numa celula
    larga o link ficaria na esquerda e a seta perdida na outra ponta. */
@@ -963,6 +1003,9 @@ tr.filtered-out { display: none; }
     --accent-glow: transparent;
     --blue-dim: #dbeafe;
     --blue: #1d4ed8;
+    --violet: #6d28d9;
+    --violet-dim: #ede9fe;
+    --violet-line: #a78bfa;
     --amber-dim: #fef3c7;
     --amber: #8a5a00;
     --red-dim: #fee2e2;

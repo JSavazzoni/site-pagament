@@ -29,6 +29,20 @@ class DbNotConfiguredError extends Error {
 
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
+/**
+ * O schema roda com CREATE TABLE IF NOT EXISTS, entao coluna nova nao chega em
+ * banco que ja existe. Cada migracao e um ALTER idempotente: se a coluna ja
+ * esta la o SQLite responde "duplicate column name" e a gente ignora.
+ * Ordem importa -- sempre acrescente no fim.
+ */
+const MIGRACOES = [
+  'ALTER TABLE config_mes ADD COLUMN taxa_conversao_gbp REAL NOT NULL DEFAULT 6.5'
+];
+
+function ehColunaDuplicada(err) {
+  return /duplicate column name/i.test(String((err && err.message) || err));
+}
+
 /* ---------------- backend: node:sqlite (local) ---------------- */
 
 function createSqliteBackend() {
@@ -40,6 +54,9 @@ function createSqliteBackend() {
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA journal_mode = WAL');
   db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+  for (const sql of MIGRACOES) {
+    try { db.exec(sql); } catch (err) { if (!ehColunaDuplicada(err)) throw err; }
+  }
 
   return {
     name: 'sqlite-local',
@@ -62,7 +79,12 @@ function createTursoBackend() {
   let schemaReady = null;
   function ensureSchema() {
     if (!schemaReady) {
-      schemaReady = client.executeMultiple(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+      schemaReady = (async () => {
+        await client.executeMultiple(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+        for (const sql of MIGRACOES) {
+          try { await client.execute(sql); } catch (err) { if (!ehColunaDuplicada(err)) throw err; }
+        }
+      })();
     }
     return schemaReady;
   }

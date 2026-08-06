@@ -34,7 +34,10 @@ router.put('/config/:competencia', requireAuth, requireRole('cco'), async (req, 
     return next(badRequest('Taxa Wise nao pode ser negativa.'));
   }
   if (body.taxaConversao != null && body.taxaConversao <= 0) {
-    return next(badRequest('Taxa de conversao precisa ser maior que zero.'));
+    return next(badRequest('Taxa de conversao do dolar precisa ser maior que zero.'));
+  }
+  if (body.taxaConversaoGbp != null && body.taxaConversaoGbp <= 0) {
+    return next(badRequest('Taxa de conversao da libra precisa ser maior que zero.'));
   }
 
   res.json(await repo.update(competencia, body, req.user.id));

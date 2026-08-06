@@ -13,7 +13,7 @@ function buildFolhaCsv(itens, config, options) {
   if (comSetor) cabecalho.push('Setor');
   cabecalho.push(
     'Nome', 'Salário Base', 'Comissão', 'Aluguel/Outros', 'Bonificação', 'Total', 'Custo Diário',
-    'Cidade', 'Cargo', 'Data', 'OBS', 'Pago', 'Dólar', 'Taxa Wise', 'Total c/ Taxas', 'Wise'
+    'Cidade', 'Cargo', 'Data', 'OBS', 'Pago', 'Dólar', 'Taxa Wise', 'Total c/ Taxas', 'Libra', 'Total Libra', 'Wise'
   );
   const linhas = [linha(cabecalho)];
 
@@ -25,7 +25,8 @@ function buildFolhaCsv(itens, config, options) {
       it.nome, Calc.num(Calc.parseNum(it.salarioBase)), Calc.num(Calc.parseNum(it.comissao)),
       Calc.num(Calc.parseNum(it.aluguel)), Calc.num(Calc.parseNum(it.bonificacao)),
       Calc.num(r.total), Calc.num(r.diario), it.cidade, it.cargo, it.data, it.obs,
-      it.pago ? 'Sim' : 'Nao', Calc.num(r.dolar), Calc.num(r.fee), Calc.num(r.totalUsd), it.wiseLink
+      it.pago ? 'Sim' : 'Nao', Calc.num(r.dolar), Calc.num(r.fee), Calc.num(r.totalUsd),
+      Calc.num(r.libra), Calc.num(r.totalGbp), it.wiseLink
     );
     linhas.push(linha(valores));
   });
@@ -35,7 +36,8 @@ function buildFolhaCsv(itens, config, options) {
   if (comSetor) totalValores.push('');
   totalValores.push(
     'TOTAL', Calc.num(t.salarioBase), Calc.num(t.comissao), Calc.num(t.aluguel), Calc.num(t.bonificacao),
-    Calc.num(t.total), Calc.num(t.diario), '', '', '', '', '', Calc.num(t.dolar), Calc.num(t.fee), Calc.num(t.totalUsd), ''
+    Calc.num(t.total), Calc.num(t.diario), '', '', '', '', '', Calc.num(t.dolar), Calc.num(t.fee), Calc.num(t.totalUsd),
+    Calc.num(t.libra), Calc.num(t.totalGbp), ''
   );
   linhas.push(linha(totalValores));
 

@@ -74,8 +74,8 @@
 
       <div class="quote-chip" id="quote-chip" title="Cota&ccedil;&atilde;o de mercado ao vivo">
         <span class="dot"></span>
-        <span>US$ 1 =</span>
-        <span class="val" id="cotacao-usd">&mdash;</span>
+        <span class="par"><span class="moeda">US$</span><span class="val" id="cotacao-usd">&mdash;</span></span>
+        <span class="par"><span class="moeda gbp">&pound;</span><span class="val gbp" id="cotacao-gbp">&mdash;</span></span>
         <span class="ago" id="cotacao-time">buscando</span>
         <button type="button" id="btn-refresh" aria-label="Atualizar cota&ccedil;&atilde;o"><span class="ico-refresh">&#8635;</span></button>
       </div>
@@ -88,36 +88,10 @@
         <button class="clear" id="busca-clear" type="button" aria-label="Limpar busca">&times;</button>
       </div>
 
-      <div class="seg" role="group" aria-label="Modo de exibi&ccedil;&atilde;o">
-        <button class="seg-btn active" type="button" data-modo="pagamento">Pagamento</button>
-        <button class="seg-btn" type="button" data-modo="completo">Completo</button>
-      </div>
-
-      <div class="menu">
-        <button class="btn btn-sm" type="button" data-menu-trigger aria-haspopup="true" aria-label="Mais a&ccedil;&otilde;es">
-          &#8943;
-        </button>
-        <div class="menu-panel" role="menu">
-          <div class="menu-label">Exportar</div>
-          <button class="menu-item" id="mi-export-wise" type="button" role="menuitem">
-            <span class="mi-ico">&#128184;</span>
-            <span><strong>Lista de pagamento Wise</strong><span class="mi-sub">Valores em d&oacute;lar, prontos para o lote</span></span>
-          </button>
-          <button class="menu-item" id="mi-export-csv" type="button" role="menuitem">
-            <span class="mi-ico">&#128202;</span>
-            <span><strong>Planilha completa (CSV)</strong><span class="mi-sub">Todos os setores desta compet&ecirc;ncia</span></span>
-          </button>
-          <div class="menu-sep"></div>
-          <button class="menu-item" id="mi-print" type="button" role="menuitem">
-            <span class="mi-ico">&#128424;</span>
-            <span><strong>Imprimir / salvar PDF</strong><span class="mi-sub">Ctrl + P</span></span>
-          </button>
-          <div class="menu-sep"></div>
-          <button class="menu-item" id="mi-expandir" type="button" role="menuitem">
-            <span class="mi-ico">&#9776;</span> Expandir / recolher todos
-          </button>
-        </div>
-      </div>
+      <button class="btn btn-sm" id="btn-print" type="button" title="Imprimir ou salvar em PDF (Ctrl + P)">
+        &#128424; Imprimir
+      </button>
+      <button class="btn btn-sm" id="btn-expandir" type="button">Expandir tudo</button>
 
     </div>
   </div>
@@ -132,6 +106,11 @@
       <span class="kpi-label">A enviar em d&oacute;lar</span>
       <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
       <span class="kpi-foot" id="kpi-total-usd-taxas">c/ taxa Wise: $0.00</span>
+    </div>
+    <div class="kpi kpi-violet">
+      <span class="kpi-label">A enviar em libra</span>
+      <strong class="kpi-value" id="kpi-total-gbp">&pound;0.00</strong>
+      <span class="kpi-foot" id="kpi-total-gbp-taxas">c/ taxa Wise: &pound;0.00</span>
     </div>
     <div class="kpi kpi-amber">
       <span class="kpi-label">Custo na cota&ccedil;&atilde;o de hoje</span>
@@ -156,7 +135,8 @@
       <span class="collapse-caret">&#9654;</span>
       <h2>Par&acirc;metros do m&ecirc;s</h2>
       <div class="collapse-summary chips">
-        <span class="chip"><span class="k">Taxa</span><span class="v" id="sum-taxa">&mdash;</span></span>
+        <span class="chip"><span class="k">D&oacute;lar</span><span class="v" id="sum-taxa">&mdash;</span></span>
+        <span class="chip"><span class="k">Libra</span><span class="v" id="sum-taxa-gbp">&mdash;</span></span>
         <span class="chip"><span class="k">Dias &uacute;teis</span><span class="v" id="sum-dias">&mdash;</span></span>
         <span class="chip"><span class="k">Wise</span><span class="v" id="sum-wise">&mdash;</span></span>
       </div>
@@ -165,17 +145,23 @@
     <div class="collapse-body">
       <div class="panel-grid">
         <div class="field">
-          <label for="taxa-conversao">Taxa de convers&atilde;o</label>
+          <label for="taxa-conversao">Taxa do d&oacute;lar</label>
           <div class="input-affix">
             <span class="affix">R$</span>
             <input type="text" id="taxa-conversao" inputmode="decimal" aria-label="Reais por d&oacute;lar">
             <span class="affix right">/ US$ 1</span>
           </div>
-          <label class="check">
-            <input type="checkbox" id="auto-cotacao">
-            <span>Seguir a cota&ccedil;&atilde;o ao vivo automaticamente</span>
-          </label>
-          <button class="btn btn-sm" id="btn-usar-cotacao" type="button" style="align-self:flex-start;">Usar a cota&ccedil;&atilde;o de agora</button>
+          <small class="hint">Quantos reais valem um d&oacute;lar neste m&ecirc;s.</small>
+        </div>
+
+        <div class="field">
+          <label for="taxa-conversao-gbp">Taxa da libra</label>
+          <div class="input-affix">
+            <span class="affix">R$</span>
+            <input type="text" id="taxa-conversao-gbp" inputmode="decimal" aria-label="Reais por libra">
+            <span class="affix right">/ &pound; 1</span>
+          </div>
+          <small class="hint">Convers&atilde;o independente &mdash; n&atilde;o sai do d&oacute;lar.</small>
         </div>
 
         <div class="field">
@@ -193,7 +179,19 @@
             <input type="text" id="taxa-wise" inputmode="decimal">
             <span class="affix right">%</span>
           </div>
-          <small class="hint">Somada ao valor em d&oacute;lar de cada colaborador.</small>
+          <small class="hint">Somada ao valor em d&oacute;lar e em libra.</small>
+        </div>
+
+        <div class="field">
+          <label>Cota&ccedil;&atilde;o ao vivo</label>
+          <label class="check">
+            <input type="checkbox" id="auto-cotacao">
+            <span>Seguir o mercado automaticamente</span>
+          </label>
+          <button class="btn btn-sm" id="btn-usar-cotacao" type="button" style="align-self:flex-start;">
+            Usar a cota&ccedil;&atilde;o de agora
+          </button>
+          <small class="hint">Vale para as duas moedas.</small>
         </div>
       </div>
     </div>

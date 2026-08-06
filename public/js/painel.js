@@ -8,15 +8,17 @@
     config: null,
     summary: null,
     quote: null,
-    fechados: {},          // setores explicitamente recolhidos pelo usuario
-    modo: 'pagamento',     // 'pagamento' | 'completo'
-    busca: ''
+    fechados: {},     // setores recolhidos pelo usuario
+    abertos: {},      // linhas com o painel de detalhes aberto
+    busca: '',
+    carregando: false
   };
   var monthNav = null;
   var saveTimers = {};
   var pendingPatches = {};
 
-  var MODO_KEY = 'folha:modo-painel';
+  // colunas visiveis na linha principal (usado no colspan do painel de detalhes)
+  var COLUNAS = 12;
 
   /* ============================================================
      Inicializacao
@@ -28,12 +30,10 @@
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
 
-      try { state.modo = localStorage.getItem(MODO_KEY) || 'pagamento'; } catch (e) { /* modo privado */ }
-      aplicarModoNosBotoes();
-
       state.competencia = App.mesAtualInput();
       monthNav = App.montarMonthNav('#month-nav', state.competencia, function (comp) {
         state.competencia = comp;
+        state.abertos = {};
         atualizarBotaoHoje();
         carregarTudo();
       });
@@ -64,9 +64,8 @@
       state.summary = r[1];
       renderConfig();
       renderSetores();
-      // renderSetores() so escreve os totais que ja vieram prontos do servidor; as
-      // celulas calculadas de CADA LINHA ficam no placeholder do template ate esta
-      // chamada -- sem ela a tela mostraria zeros ate alguem editar algum campo.
+      // renderSetores() so escreve os totais que ja vieram do servidor; as celulas
+      // calculadas de CADA LINHA ficam no placeholder do template ate esta chamada.
       recalcTudoLocal();
       aplicarBusca();
     }).catch(function (e) {
@@ -88,8 +87,9 @@
       return q;
     }).catch(function () {
       App.$('#quote-chip').classList.add('is-off');
-      App.$('#cotacao-usd').textContent = 'indispon\u00edvel';
-      App.$('#cotacao-time').textContent = '';
+      App.$('#cotacao-usd').textContent = '—';
+      App.$('#cotacao-gbp').textContent = '—';
+      App.$('#cotacao-time').textContent = 'indisponível';
     });
   }
 
@@ -98,6 +98,7 @@
     if (!q) return;
     App.$('#quote-chip').classList.remove('is-off');
     App.$('#cotacao-usd').textContent = Calc.brl(q.usd);
+    App.$('#cotacao-gbp').textContent = q.gbp ? Calc.brl(q.gbp) : '—';
     App.$('#cotacao-time').textContent = App.tempoRelativo(q.at);
   }
 
@@ -108,13 +109,17 @@
   function renderConfig() {
     var c = state.config;
     App.$('#taxa-conversao').value = Calc.num(c.taxaConversao);
+    App.$('#taxa-conversao-gbp').value = Calc.num(c.taxaConversaoGbp);
     App.$('#dias-uteis').value = c.diasUteis;
     App.$('#taxa-wise').value = Calc.num(c.taxaWisePct);
     App.$('#auto-cotacao').checked = c.taxaConversaoAuto;
     App.$('#taxa-conversao').disabled = c.taxaConversaoAuto;
+    App.$('#taxa-conversao-gbp').disabled = c.taxaConversaoAuto;
     App.$('#btn-usar-cotacao').disabled = c.taxaConversaoAuto;
 
-    App.$('#sum-taxa').textContent = 'R$ ' + Calc.num(c.taxaConversao) + (c.taxaConversaoAuto ? ' (auto)' : '');
+    var auto = c.taxaConversaoAuto ? ' (auto)' : '';
+    App.$('#sum-taxa').textContent = 'R$ ' + Calc.num(c.taxaConversao) + auto;
+    App.$('#sum-taxa-gbp').textContent = 'R$ ' + Calc.num(c.taxaConversaoGbp) + auto;
     App.$('#sum-dias').textContent = c.diasUteis;
     App.$('#sum-wise').textContent = Calc.num(c.taxaWisePct) + '%';
   }
@@ -124,6 +129,7 @@
       diasUteis: state.config.diasUteis,
       taxaWisePct: state.config.taxaWisePct,
       taxaConversao: state.config.taxaConversao,
+      taxaConversaoGbp: state.config.taxaConversaoGbp,
       taxaConversaoAuto: state.config.taxaConversaoAuto
     }, patch);
 
@@ -133,7 +139,7 @@
       body: JSON.stringify(body)
     }).then(function (r) {
       return r.json().then(function (d) {
-        if (!r.ok) throw new Error(d.error || 'Erro ao salvar configura\u00e7\u00e3o.');
+        if (!r.ok) throw new Error(d.error || 'Erro ao salvar configuração.');
         return d;
       });
     }).then(function (updated) {
@@ -158,9 +164,11 @@
     App.$('#kpi-qtd').textContent = itens.length;
     App.$('#kpi-setores').textContent = s.sectors.length + ' setor' + (s.sectors.length === 1 ? '' : 'es');
     App.$('#kpi-total-brl').textContent = Calc.brl(s.geral.total);
-    App.$('#kpi-custo-diario').textContent = 'Custo di\u00e1rio: ' + Calc.brl(s.geral.diario);
+    App.$('#kpi-custo-diario').textContent = 'Custo diário: ' + Calc.brl(s.geral.diario);
     App.$('#kpi-total-usd').textContent = Calc.usd(s.geral.dolar);
     App.$('#kpi-total-usd-taxas').textContent = 'c/ taxa Wise: ' + Calc.usd(s.geral.totalUsd);
+    App.$('#kpi-total-gbp').textContent = Calc.gbp(s.geral.libra);
+    App.$('#kpi-total-gbp-taxas').textContent = 'c/ taxa Wise: ' + Calc.gbp(s.geral.totalGbp);
 
     var pagos = itens.filter(function (it) { return it.pago; });
     App.$('#kpi-pago').textContent = pagos.length + ' de ' + itens.length;
@@ -171,11 +179,11 @@
     if (!state.quote || !state.quote.usd) {
       App.$('#kpi-custo-real').textContent = '—';
       el.className = 'kpi-foot';
-      el.textContent = 'Cota\u00e7\u00e3o indispon\u00edvel';
+      el.textContent = 'Cotação indisponível';
     } else if (!s.geral.total) {
       App.$('#kpi-custo-real').textContent = '—';
       el.className = 'kpi-foot';
-      el.textContent = 'Sem colaboradores neste m\u00eas';
+      el.textContent = 'Sem colaboradores neste mês';
     } else {
       var custoReal = s.geral.totalUsd * state.quote.usd;
       App.$('#kpi-custo-real').textContent = Calc.brl(custoReal);
@@ -210,28 +218,21 @@
               statusSetor(pagos, sec.itens.length) +
             '</span>' +
             '<div class="sector-stats">' +
-              '<span class="sector-stat"><span class="k">Total</span><span class="v" data-sub="total">' + Calc.brl(sec.totals.total) + '</span></span>' +
-              '<span class="sector-stat"><span class="k">Em dolar</span><span class="v usd" data-sub="dolar">' + Calc.usd(sec.totals.dolar) + '</span></span>' +
-              '<span class="sector-stat"><span class="k">C/ taxas</span><span class="v usd" data-sub="totalUsd">' + Calc.usd(sec.totals.totalUsd) + '</span></span>' +
+              '<span class="sector-stat"><span class="k">Folha</span><span class="v" data-sub="total">' + Calc.brl(sec.totals.total) + '</span></span>' +
+              '<span class="sector-stat"><span class="k">A enviar em US$</span><span class="v usd" data-sub="totalUsd">' + Calc.usd(sec.totals.totalUsd) + '</span></span>' +
+              '<span class="sector-stat"><span class="k">A enviar em £</span><span class="v gbp" data-sub="totalGbp">' + Calc.gbp(sec.totals.totalGbp) + '</span></span>' +
             '</div>' +
             '<div class="sector-actions">' +
               (sec.itens.length
                 ? '<button class="btn btn-sm" data-pagar-setor type="button">' +
                     (todosPagos ? 'Desmarcar setor' : '&#10003; Pagar setor inteiro') + '</button>'
                 : '') +
-              '<div class="menu">' +
-                '<button class="btn btn-sm" type="button" data-menu-trigger aria-label="Acoes do setor">&#8943;</button>' +
-                '<div class="menu-panel" role="menu">' +
-                  '<button class="menu-item" data-export-setor type="button" role="menuitem"><span class="mi-ico">&#128184;</span> Lista Wise deste setor</button>' +
-                  '<button class="menu-item" data-csv-setor type="button" role="menuitem"><span class="mi-ico">&#128202;</span> CSV deste setor</button>' +
-                '</div>' +
-              '</div>' +
             '</div>' +
           '</div>' +
           '<div class="sector-body">' +
-            '<div class="table-scroll"><table class="grid modo-' + state.modo + '" data-tabela-setor="' + sec.sectorId + '">' +
+            '<div class="table-scroll"><table class="grid" data-tabela-setor="' + sec.sectorId + '">' +
               cabecalho() +
-              '<tbody>' + sec.itens.map(linha).join('') + '</tbody>' +
+              '<tbody>' + sec.itens.map(linhas).join('') + '</tbody>' +
               rodape(sec.totals) +
             '</table></div>' +
           '</div>' +
@@ -248,79 +249,109 @@
 
   function cabecalho() {
     return '<thead><tr>' +
-      '<th class="col-idx stick">#</th>' +
-      '<th class="col-nome col-flex stick-2">Nome</th>' +
-      '<th class="num col-money det sep-l">Sal&aacute;rio base</th>' +
-      '<th class="num col-money det">Comiss&atilde;o</th>' +
-      '<th class="num col-money det">Aluguel/Outros</th>' +
-      '<th class="num col-money det">Bonifica&ccedil;&atilde;o</th>' +
+      '<th class="col-exp stick"><span class="sr-only">Detalhes</span></th>' +
+      '<th class="col-idx">#</th>' +
+      '<th class="col-nome col-flex">Nome</th>' +
+      '<th class="col-cargo">Cargo</th>' +
       '<th class="num col-calc sep-l">Total R$</th>' +
-      '<th class="num col-calc det">Custo di&aacute;rio</th>' +
+      '<th class="num col-calc">Custo di&aacute;rio</th>' +
       '<th class="num col-calc sep-l">D&oacute;lar</th>' +
-      '<th class="num col-calc">Taxa Wise</th>' +
       '<th class="num col-calc">Total US$</th>' +
-      '<th class="col-txt det sep-l">Cidade</th>' +
-      '<th class="col-txt det">Cargo</th>' +
-      '<th class="col-data det">Data</th>' +
-      '<th class="col-obs det">OBS</th>' +
-      '<th class="col-wise sep-l">Link Wise</th>' +
-      '<th class="col-status">Status</th>' +
+      '<th class="num col-calc sep-l">Libra</th>' +
+      '<th class="num col-calc">Total &pound;</th>' +
+      '<th class="col-status sep-l">Status</th>' +
       '<th class="col-acao"><span class="sr-only">A&ccedil;&otilde;es</span></th>' +
       '</tr></thead>';
   }
 
   function rodape(t) {
     return '<tfoot><tr>' +
-      '<td colspan="2" class="total-label stick">Total do setor</td>' +
-      '<td class="num det" data-tf="salarioBase">' + Calc.brl(t.salarioBase) + '</td>' +
-      '<td class="num det" data-tf="comissao">' + Calc.brl(t.comissao) + '</td>' +
-      '<td class="num det" data-tf="aluguel">' + Calc.brl(t.aluguel) + '</td>' +
-      '<td class="num det" data-tf="bonificacao">' + Calc.brl(t.bonificacao) + '</td>' +
+      '<td colspan="4" class="total-label stick">Total do setor</td>' +
       '<td class="num" data-tf="total">' + Calc.brl(t.total) + '</td>' +
-      '<td class="num det" data-tf="diario">' + Calc.brl(t.diario) + '</td>' +
-      '<td class="num calc-usd" data-tf="dolar">' + Calc.usd(t.dolar) + '</td>' +
-      '<td class="num" data-tf="fee">' + Calc.usd(t.fee) + '</td>' +
+      '<td class="num" data-tf="diario">' + Calc.brl(t.diario) + '</td>' +
+      '<td class="num" data-tf="dolar">' + Calc.usd(t.dolar) + '</td>' +
       '<td class="num calc-usd" data-tf="totalUsd">' + Calc.usd(t.totalUsd) + '</td>' +
-      '<td class="det" colspan="4"></td>' +
-      '<td colspan="3"></td>' +
+      '<td class="num" data-tf="libra">' + Calc.gbp(t.libra) + '</td>' +
+      '<td class="num calc-gbp" data-tf="totalGbp">' + Calc.gbp(t.totalGbp) + '</td>' +
+      '<td colspan="2"></td>' +
       '</tr></tfoot>';
   }
 
-  function linha(it, i) {
-    var t = it.pago;
-    var d = t ? ' disabled' : '';
-    return '<tr data-id="' + it.id + '"' + (t ? ' class="is-pago"' : '') +
+  /** Devolve as DUAS linhas de um item: a principal e o painel de detalhes. */
+  function linhas(it, i) {
+    var aberta = !!state.abertos[it.id];
+    return linhaPrincipal(it, i, aberta) + linhaDetalhe(it, aberta);
+  }
+
+  function linhaPrincipal(it, i, aberta) {
+    return '<tr data-id="' + it.id + '"' +
+        ' class="' + (it.pago ? 'is-pago ' : '') + (aberta ? 'aberta' : '') + '"' +
         ' data-busca="' + esc([it.nome, it.cargo, it.cidade, it.obs].join(' ').toLowerCase()) + '">' +
-      '<td class="idx stick">' + (i + 1) + '</td>' +
-      '<td class="stick-2"><input class="cell nome" data-f="nome" placeholder="Nome" value="' + esc(it.nome) + '"' + d + '></td>' +
-      money('salarioBase', it.salarioBase, t, ' det sep-l') +
-      money('comissao', it.comissao, t, ' det') +
-      money('aluguel', it.aluguel, t, ' det') +
-      money('bonificacao', it.bonificacao, t, ' det') +
+      '<td class="exp stick"><button class="btn-exp" data-exp type="button" aria-label="Ver detalhes">&#9654;</button></td>' +
+      '<td class="idx">' + (i + 1) + '</td>' +
+      '<td><input class="cell nome" data-f="nome" placeholder="Nome" value="' + esc(it.nome) + '"' +
+        (it.pago ? ' disabled' : '') + '></td>' +
+      '<td><input class="cell" data-f="cargo" placeholder="—" value="' + esc(it.cargo) + '"' +
+        (it.pago ? ' disabled' : '') + '></td>' +
       '<td class="calc calc-total sep-l" data-c="total">R$ 0,00</td>' +
-      '<td class="calc calc-diario det" data-c="diario">R$ 0,00</td>' +
-      '<td class="calc calc-usd sep-l" data-c="dolar">$0.00</td>' +
-      '<td class="calc calc-muted" data-c="fee">$0.00</td>' +
+      '<td class="calc calc-diario" data-c="diario">R$ 0,00</td>' +
+      '<td class="calc calc-muted sep-l" data-c="dolar">$0.00</td>' +
       '<td class="calc calc-usd" data-c="totalUsd">$0.00</td>' +
-      '<td class="det sep-l"><input class="cell" data-f="cidade" placeholder="&mdash;" value="' + esc(it.cidade) + '"' + d + '></td>' +
-      '<td class="det"><input class="cell" data-f="cargo" placeholder="&mdash;" value="' + esc(it.cargo) + '"' + d + '></td>' +
-      '<td class="det"><input class="cell" type="date" data-f="data" value="' + esc(it.data) + '"' + d + '></td>' +
-      '<td class="det"><input class="cell" data-f="obs" placeholder="&mdash;" value="' + esc(it.obs) + '"' + d + '></td>' +
-      '<td class="sep-l"><div class="wise-cell">' +
-        '<input class="cell" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
-        '<a class="wise-link" target="_blank" rel="noopener" title="Abrir link Wise" hidden>&#8599;</a>' +
-      '</div></td>' +
-      '<td><button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
+      '<td class="calc calc-muted sep-l" data-c="libra">&pound;0.00</td>' +
+      '<td class="calc calc-gbp" data-c="totalGbp">&pound;0.00</td>' +
+      '<td class="sep-l"><button class="pago-toggle' + (it.pago ? ' on' : '') + '" data-toggle-pago type="button">' +
         (it.pago ? '&#10003; Pago' : 'Marcar pago') + '</button></td>' +
       '<td class="acao"><button class="btn-icon danger" data-del type="button" title="Remover" aria-label="Remover">&times;</button></td>' +
       '</tr>';
   }
 
-  function money(field, val, travado, extraTd) {
-    var v = Calc.parseNum(val);
-    return '<td class="' + (extraTd || '').trim() + '"><input class="cell money" data-f="' + field +
-      '" inputmode="decimal" placeholder="0,00" value="' + (v ? Calc.num(v) : '') + '"' +
-      (travado ? ' disabled' : '') + '></td>';
+  /**
+   * Painel de detalhes: tudo o que nao cabe com folga na linha principal.
+   * Campos rotulados e de tamanho normal -- nada truncado.
+   */
+  function linhaDetalhe(it, aberta) {
+    var d = it.pago ? ' disabled' : '';
+    var href = Calc.wiseHref(it.wiseLink);
+    return '<tr class="det-row' + (aberta ? '' : ' escondida') + '" data-det="' + it.id + '">' +
+      '<td colspan="' + COLUNAS + '"><div class="det-panel">' +
+
+        '<div class="det-titulo">Composição do salário</div>' +
+        '<div class="det-grid compacta">' +
+          campoDinheiro('salarioBase', 'Salário base', it.salarioBase, d) +
+          campoDinheiro('comissao', 'Comissão', it.comissao, d) +
+          campoDinheiro('aluguel', 'Aluguel / Outros', it.aluguel, d) +
+          campoDinheiro('bonificacao', 'Bonificação', it.bonificacao, d) +
+          '<div class="det-field"><span>Taxa Wise no dólar</span><div class="valor usd" data-c="fee">$0.00</div></div>' +
+          '<div class="det-field"><span>Taxa Wise na libra</span><div class="valor gbp" data-c="feeGbp">&pound;0.00</div></div>' +
+        '</div>' +
+
+        '<div class="det-titulo" style="margin-top:18px;">Dados do colaborador</div>' +
+        '<div class="det-grid">' +
+          campoTexto('cidade', 'Cidade', it.cidade, d, 'Ex.: São Paulo') +
+          '<div class="det-field"><span>Data</span>' +
+            '<input class="input" type="date" data-f="data" value="' + esc(it.data) + '"' + d + '></div>' +
+          '<div class="det-field" style="grid-column:span 2;"><span>Link do Wise</span><div class="det-wise">' +
+            '<input class="input" data-f="wiseLink" placeholder="wise.com/pay/me/..." value="' + esc(it.wiseLink) + '"' + d + '>' +
+            '<a class="btn btn-sm" data-wise-abrir target="_blank" rel="noopener"' +
+              (href ? ' href="' + esc(href) + '"' : ' hidden') + '>Abrir &#8599;</a>' +
+          '</div></div>' +
+          campoTexto('obs', 'Observações', it.obs, d, 'Anotação livre') +
+        '</div>' +
+
+      '</div></td></tr>';
+  }
+
+  function campoDinheiro(campo, rotulo, valor, disabled) {
+    var v = Calc.parseNum(valor);
+    return '<label class="det-field"><span>' + rotulo + '</span>' +
+      '<input class="input money" data-f="' + campo + '" inputmode="decimal" placeholder="0,00" value="' +
+      (v ? Calc.num(v) : '') + '"' + disabled + '></label>';
+  }
+
+  function campoTexto(campo, rotulo, valor, disabled, placeholder) {
+    return '<label class="det-field"><span>' + rotulo + '</span>' +
+      '<input class="input" data-f="' + campo + '" placeholder="' + esc(placeholder || '') +
+      '" value="' + esc(valor) + '"' + disabled + '></label>';
   }
 
   /* ============================================================
@@ -354,34 +385,46 @@
       var tr = tabela.querySelector('tr[data-id="' + it.id + '"]');
       if (!tr) return;
       var r = Calc.calcItem(it, state.config);
-      tr.querySelector('[data-c="total"]').textContent = Calc.brl(r.total);
-      tr.querySelector('[data-c="diario"]').textContent = Calc.brl(r.diario);
-      tr.querySelector('[data-c="dolar"]').textContent = Calc.usd(r.dolar);
-      tr.querySelector('[data-c="fee"]').textContent = Calc.usd(r.fee);
-      tr.querySelector('[data-c="totalUsd"]').textContent = Calc.usd(r.totalUsd);
+      escreve(tr, 'total', Calc.brl(r.total));
+      escreve(tr, 'diario', Calc.brl(r.diario));
+      escreve(tr, 'dolar', Calc.usd(r.dolar));
+      escreve(tr, 'totalUsd', Calc.usd(r.totalUsd));
+      escreve(tr, 'libra', Calc.gbp(r.libra));
+      escreve(tr, 'totalGbp', Calc.gbp(r.totalGbp));
 
-      var link = tr.querySelector('.wise-link');
-      var href = Calc.wiseHref(it.wiseLink);
-      link.hidden = !href;
-      if (href) { link.href = href; link.classList.add('on'); }
+      var det = tabela.querySelector('tr[data-det="' + it.id + '"]');
+      if (det) {
+        escreve(det, 'fee', Calc.usd(r.fee));
+        escreve(det, 'feeGbp', Calc.gbp(r.feeGbp));
+        var link = det.querySelector('[data-wise-abrir]');
+        var href = Calc.wiseHref(it.wiseLink);
+        if (link) { link.hidden = !href; if (href) link.href = href; }
+      }
     });
 
     var t = sec.totals;
-    ['salarioBase', 'comissao', 'aluguel', 'bonificacao', 'total', 'diario'].forEach(function (f) {
-      var c = tabela.querySelector('[data-tf="' + f + '"]');
-      if (c) c.textContent = Calc.brl(t[f]);
-    });
-    ['dolar', 'fee', 'totalUsd'].forEach(function (f) {
-      var c = tabela.querySelector('[data-tf="' + f + '"]');
-      if (c) c.textContent = Calc.usd(t[f]);
-    });
+    escreveTf(tabela, 'total', Calc.brl(t.total));
+    escreveTf(tabela, 'diario', Calc.brl(t.diario));
+    escreveTf(tabela, 'dolar', Calc.usd(t.dolar));
+    escreveTf(tabela, 'totalUsd', Calc.usd(t.totalUsd));
+    escreveTf(tabela, 'libra', Calc.gbp(t.libra));
+    escreveTf(tabela, 'totalGbp', Calc.gbp(t.totalGbp));
 
     var head = document.querySelector('.sector-block[data-sector="' + sec.sectorId + '"] .sector-head');
     if (head) {
       head.querySelector('[data-sub="total"]').textContent = Calc.brl(t.total);
-      head.querySelector('[data-sub="dolar"]').textContent = Calc.usd(t.dolar);
       head.querySelector('[data-sub="totalUsd"]').textContent = Calc.usd(t.totalUsd);
+      head.querySelector('[data-sub="totalGbp"]').textContent = Calc.gbp(t.totalGbp);
     }
+  }
+
+  function escreve(raiz, chave, texto) {
+    var el = raiz.querySelector('[data-c="' + chave + '"]');
+    if (el) el.textContent = texto;
+  }
+  function escreveTf(tabela, chave, texto) {
+    var el = tabela.querySelector('[data-tf="' + chave + '"]');
+    if (el) el.textContent = texto;
   }
 
   /* ============================================================
@@ -400,25 +443,33 @@
     }, 500);
   }
 
+  /** Sobe do campo editado (na linha ou no painel de detalhes) ate o id do item. */
+  function idDoCampo(inp) {
+    var tr = inp.closest('tr');
+    if (!tr) return null;
+    return Number(tr.dataset.id || tr.dataset.det);
+  }
+
   function bindTabela() {
     var box = App.$('#setores-container');
 
     box.addEventListener('input', function (e) {
-      var inp = e.target.closest('.cell');
-      if (!inp) return;
-      var id = Number(inp.closest('tr').dataset.id);
+      var inp = e.target.closest('.cell, .det-field .input');
+      if (!inp || !inp.dataset.f) return;
+      var id = idDoCampo(inp);
       var found = acharItem(id);
       if (!found) return;
       var f = inp.dataset.f;
       found.item[f] = inp.classList.contains('money') ? Calc.parseNum(inp.value) : inp.value;
+      atualizarBuscaDaLinha(found.item);
       recalcTudoLocal();
       salvarItem(id, f, found.item[f]);
     });
 
     box.addEventListener('focusin', function (e) {
-      var inp = e.target.closest('.cell.money');
-      if (!inp) return;
-      var found = acharItem(Number(inp.closest('tr').dataset.id));
+      var inp = e.target.closest('.money');
+      if (!inp || !inp.dataset.f) return;
+      var found = acharItem(idDoCampo(inp));
       if (!found) return;
       var v = Calc.parseNum(found.item[inp.dataset.f]);
       inp.value = v ? String(v).replace('.', ',') : '';
@@ -426,19 +477,19 @@
     });
 
     box.addEventListener('focusout', function (e) {
-      var inp = e.target.closest('.cell.money');
-      if (!inp) return;
+      var inp = e.target.closest('.money');
+      if (!inp || !inp.dataset.f) return;
       var v = Calc.parseNum(inp.value);
       inp.value = v ? Calc.num(v) : '';
     });
 
-    // Enter desce para a mesma coluna da linha seguinte -- digitacao continua em coluna.
+    // Enter desce para a mesma coluna da linha seguinte (so na grade principal)
     box.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       var inp = e.target.closest('.cell');
       if (!inp) return;
       e.preventDefault();
-      var proxima = inp.closest('tr').nextElementSibling;
+      var proxima = proximaLinhaPrincipal(inp.closest('tr'));
       if (proxima) {
         var alvo = proxima.querySelector('[data-f="' + inp.dataset.f + '"]');
         if (alvo) { alvo.focus(); return; }
@@ -448,6 +499,9 @@
 
     box.addEventListener('click', function (e) {
       if (e.target.closest('.menu')) return;
+
+      var exp = e.target.closest('[data-exp]');
+      if (exp) { alternarDetalhe(exp.closest('tr')); return; }
 
       var cab = e.target.closest('[data-toggle-sector]');
       if (cab && !e.target.closest('input, button, a')) {
@@ -460,19 +514,6 @@
       var pagarSetor = e.target.closest('[data-pagar-setor]');
       if (pagarSetor) { marcarSetor(pagarSetor); return; }
 
-      var expWise = e.target.closest('[data-export-setor]');
-      if (expWise) {
-        baixar('/api/payroll/export-wise.csv?competencia=' + enc(state.competencia) +
-          '&sectorId=' + expWise.closest('.sector-block').dataset.sector);
-        return;
-      }
-      var expCsv = e.target.closest('[data-csv-setor]');
-      if (expCsv) {
-        baixar('/api/payroll/export.csv?competencia=' + enc(state.competencia) +
-          '&sectorId=' + expCsv.closest('.sector-block').dataset.sector);
-        return;
-      }
-
       var toggle = e.target.closest('[data-toggle-pago]');
       if (toggle) { alternarPago(toggle); return; }
 
@@ -481,15 +522,37 @@
     });
   }
 
+  function proximaLinhaPrincipal(tr) {
+    var n = tr.nextElementSibling;
+    while (n && (n.classList.contains('det-row') || n.classList.contains('filtered-out'))) {
+      n = n.nextElementSibling;
+    }
+    return n;
+  }
+
+  function atualizarBuscaDaLinha(it) {
+    var tr = document.querySelector('tr[data-id="' + it.id + '"]');
+    if (tr) tr.dataset.busca = [it.nome, it.cargo, it.cidade, it.obs].join(' ').toLowerCase();
+  }
+
+  function alternarDetalhe(tr) {
+    var id = Number(tr.dataset.id);
+    var det = document.querySelector('tr[data-det="' + id + '"]');
+    if (!det) return;
+    var abrindo = det.classList.contains('escondida');
+    det.classList.toggle('escondida', !abrindo);
+    tr.classList.toggle('aberta', abrindo);
+    if (abrindo) state.abertos[id] = true; else delete state.abertos[id];
+  }
+
   function alternarPago(btn) {
     var tr = btn.closest('tr');
     var id = Number(tr.dataset.id);
     var found = acharItem(id);
     if (!found) return;
 
-    var novo = !found.item.pago;
     btn.disabled = true;
-    App.patch('/api/payroll/' + id + '/pago', { pago: novo }).then(function (upd) {
+    App.patch('/api/payroll/' + id + '/pago', { pago: !found.item.pago }).then(function (upd) {
       found.item.pago = upd.pago;
       found.item.pagoEm = upd.pagoEm;
       renderSetores();
@@ -516,8 +579,8 @@
     App.confirmar({
       titulo: marcar ? 'Marcar setor como pago?' : 'Desmarcar pagamentos?',
       texto: marcar
-        ? alvos.length + ' colaborador(es) de "' + sec.sectorName + '" ficar\u00e3o marcados como pagos e travados para o gestor.'
-        : alvos.length + ' colaborador(es) de "' + sec.sectorName + '" voltar\u00e3o a ficar pendentes.',
+        ? alvos.length + ' colaborador(es) de "' + sec.sectorName + '" ficarão marcados como pagos e travados para o gestor.'
+        : alvos.length + ' colaborador(es) de "' + sec.sectorName + '" voltarão a ficar pendentes.',
       ok: marcar ? 'Marcar todos' : 'Desmarcar todos',
       perigo: !marcar
     }).then(function (sim) {
@@ -537,7 +600,7 @@
         renderSetores();
         recalcTudoLocal();
         aplicarBusca();
-        App.toast(alvos.length + ' lan\u00e7amento(s) atualizados.', 'ok');
+        App.toast(alvos.length + ' lançamento(s) atualizados.', 'ok');
       }).catch(function (e) {
         App.toast(e.message, 'err');
         carregarTudo();
@@ -553,14 +616,15 @@
 
     App.confirmar({
       titulo: 'Remover da folha?',
-      texto: (found.item.nome || 'Este colaborador') + ' ser\u00e1 removido de ' +
-        App.labelMes(state.competencia) + '. Os outros meses n\u00e3o s\u00e3o afetados.',
+      texto: (found.item.nome || 'Este colaborador') + ' será removido de ' +
+        App.labelMes(state.competencia) + '. Os outros meses não são afetados.',
       ok: 'Remover', perigo: true
     }).then(function (sim) {
       if (!sim) return;
       App.del('/api/payroll/' + id).then(function () {
         found.sector.itens = found.sector.itens.filter(function (x) { return x.id !== id; });
         found.sector.itensCount = found.sector.itens.length;
+        delete state.abertos[id];
         renderSetores();
         recalcTudoLocal();
         aplicarBusca();
@@ -570,7 +634,7 @@
   }
 
   /* ============================================================
-     Busca e modo de exibicao
+     Busca
      ============================================================ */
 
   function aplicarBusca() {
@@ -580,9 +644,12 @@
 
     App.$all('.sector-block').forEach(function (bloco) {
       var achouNoBloco = 0;
-      App.$all('tbody tr', bloco).forEach(function (tr) {
+      App.$all('tbody tr[data-id]', bloco).forEach(function (tr) {
         var bate = !termo || (tr.dataset.busca || '').indexOf(termo) !== -1;
         tr.classList.toggle('filtered-out', !bate);
+        // o painel de detalhes acompanha a linha dona dele
+        var det = bloco.querySelector('tr[data-det="' + tr.dataset.id + '"]');
+        if (det) det.classList.toggle('filtered-out', !bate);
         if (bate) achouNoBloco++;
       });
       visiveis += achouNoBloco;
@@ -594,29 +661,16 @@
     App.$('#empty-geral').hidden = !!termo || temItens;
   }
 
-  function aplicarModoNosBotoes() {
-    App.$all('[data-modo]').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.modo === state.modo);
-    });
-    App.$all('.grid[data-tabela-setor]').forEach(function (t) {
-      t.classList.remove('modo-pagamento', 'modo-completo');
-      t.classList.add('modo-' + state.modo);
-    });
-  }
-
   /* ============================================================
      Eventos gerais
      ============================================================ */
-
-  function enc(s) { return encodeURIComponent(s); }
-  function baixar(url) { location.href = url; }
 
   function bindEventos() {
     bindTabela();
 
     App.$('#btn-hoje').addEventListener('click', function () {
-      monthNav.set(App.mesAtualInput());
       state.competencia = App.mesAtualInput();
+      monthNav.set(state.competencia);
       atualizarBotaoHoje();
       carregarTudo();
     });
@@ -635,8 +689,8 @@
     /**
      * O change dos campos de configuracao so vale quando NAO ha carregamento em
      * curso: trocar de competencia com o campo focado dispara o change com o valor
-     * do mes que saiu e gravaria essa numero no mes novo (ja zerou a taxa Wise uma
-     * vez em teste). Em duvida, renderConfig() repoe o valor verdadeiro na tela.
+     * do mes que saiu e gravaria esse numero no mes novo. Em duvida, renderConfig()
+     * repoe o valor verdadeiro na tela.
      */
     function mudouConfig(fn) {
       return function (e) {
@@ -649,8 +703,13 @@
 
     App.$('#taxa-conversao').addEventListener('change', mudouConfig(function (e) {
       var v = Calc.parseNum(e.target.value);
-      if (v <= 0) { App.toast('A taxa precisa ser maior que zero.', 'err'); renderConfig(); return; }
+      if (v <= 0) { App.toast('A taxa do dólar precisa ser maior que zero.', 'err'); renderConfig(); return; }
       salvarConfig({ taxaConversao: v });
+    }));
+    App.$('#taxa-conversao-gbp').addEventListener('change', mudouConfig(function (e) {
+      var v = Calc.parseNum(e.target.value);
+      if (v <= 0) { App.toast('A taxa da libra precisa ser maior que zero.', 'err'); renderConfig(); return; }
+      salvarConfig({ taxaConversaoGbp: v });
     }));
     App.$('#dias-uteis').addEventListener('change', mudouConfig(function (e) {
       var v = Math.round(Calc.parseNum(e.target.value));
@@ -662,13 +721,19 @@
     }));
     App.$('#auto-cotacao').addEventListener('change', mudouConfig(function (e) {
       var patch = { taxaConversaoAuto: e.target.checked };
-      if (e.target.checked && state.quote) patch.taxaConversao = state.quote.usd;
+      if (e.target.checked && state.quote) {
+        if (state.quote.usd > 0) patch.taxaConversao = state.quote.usd;
+        if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
+      }
       salvarConfig(patch);
     }));
     App.$('#btn-usar-cotacao').addEventListener('click', function () {
-      if (!state.quote) { App.toast('Cota\u00e7\u00e3o indispon\u00edvel no momento.', 'err'); return; }
-      salvarConfig({ taxaConversao: state.quote.usd }).then(function () {
-        App.toast('Taxa do m\u00eas: ' + Calc.brl(state.config.taxaConversao) + ' por US$ 1.', 'ok');
+      if (!state.quote) { App.toast('Cotação indisponível no momento.', 'err'); return; }
+      var patch = {};
+      if (state.quote.usd > 0) patch.taxaConversao = state.quote.usd;
+      if (state.quote.gbp > 0) patch.taxaConversaoGbp = state.quote.gbp;
+      salvarConfig(patch).then(function () {
+        App.toast('Taxas do mês atualizadas pela cotação de agora.', 'ok');
       });
     });
 
@@ -680,8 +745,14 @@
         state.quote = q;
         renderQuote();
         renderKpis();
-        if (state.config.taxaConversaoAuto) salvarConfig({ taxaConversao: q.usd });
-        App.toast('Cota\u00e7\u00e3o atualizada: US$ 1 = ' + Calc.brl(q.usd), 'ok');
+        if (state.config.taxaConversaoAuto) {
+          var patch = {};
+          if (q.usd > 0) patch.taxaConversao = q.usd;
+          if (q.gbp > 0) patch.taxaConversaoGbp = q.gbp;
+          salvarConfig(patch);
+        }
+        App.toast('Cotação atualizada: US$ 1 = ' + Calc.brl(q.usd) +
+          (q.gbp ? ' · £ 1 = ' + Calc.brl(q.gbp) : ''), 'ok');
       }).catch(function (er) { App.toast(er.message, 'err'); })
         .then(function () { chip.classList.remove('is-loading'); });
     });
@@ -696,34 +767,20 @@
       busca.value = ''; state.busca = ''; aplicarBusca(); busca.focus();
     });
 
-    // modo de exibicao
-    App.$all('[data-modo]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        state.modo = b.dataset.modo;
-        try { localStorage.setItem(MODO_KEY, state.modo); } catch (e) { /* modo privado */ }
-        aplicarModoNosBotoes();
-      });
-    });
+    App.$('#btn-print').addEventListener('click', function () { window.print(); });
 
-    // menu de acoes
-    App.$('#mi-export-csv').addEventListener('click', function () {
-      baixar('/api/payroll/export.csv?competencia=' + enc(state.competencia));
-    });
-    App.$('#mi-export-wise').addEventListener('click', function () {
-      baixar('/api/payroll/export-wise.csv?competencia=' + enc(state.competencia));
-    });
-    App.$('#mi-print').addEventListener('click', function () { window.print(); });
-    App.$('#mi-expandir').addEventListener('click', function () {
+    App.$('#btn-expandir').addEventListener('click', function () {
       var algumFechado = App.$all('.sector-block:not(.open)').length > 0;
       App.$all('.sector-block').forEach(function (b) {
         b.classList.toggle('open', algumFechado);
         state.fechados[b.dataset.sector] = !algumFechado;
       });
+      App.$('#btn-expandir').textContent = algumFechado ? 'Recolher tudo' : 'Expandir tudo';
     });
 
     App.$('#btn-ir-admin').addEventListener('click', function () { location.href = '/admin.html'; });
 
-    // "/" foca a busca, como nas ferramentas que a equipe ja usa
+    // "/" foca a busca
     document.addEventListener('keydown', function (e) {
       if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
       var t = e.target;

@@ -72,10 +72,7 @@
 
       <div class="toolbar-spacer"></div>
 
-      <div class="seg" role="group" aria-label="Modo de exibi&ccedil;&atilde;o">
-        <button class="seg-btn active" type="button" data-modo="completo">Completo</button>
-        <button class="seg-btn" type="button" data-modo="valores">S&oacute; valores</button>
-      </div>
+      <button class="btn btn-sm" id="btn-expandir" type="button">Expandir tudo</button>
 
       <button class="btn btn-primary btn-sm" id="btn-add" type="button">
         <span>+</span> Colaborador
@@ -92,12 +89,9 @@
           </button>
           <button class="menu-item" id="mi-import" type="button" role="menuitem">
             <span class="mi-ico">&#8593;</span>
-            <span><strong>Importar planilha (CSV)</strong><span class="mi-sub">Aceita o export do Excel/Sheets</span></span>
+            <span><strong>Importar planilha (CSV)</strong><span class="mi-sub">Aceita o arquivo do Excel/Sheets</span></span>
           </button>
           <div class="menu-sep"></div>
-          <button class="menu-item" id="mi-export" type="button" role="menuitem">
-            <span class="mi-ico">&#128202;</span> Exportar CSV do setor
-          </button>
           <button class="menu-item" id="mi-print" type="button" role="menuitem">
             <span class="mi-ico">&#128424;</span>
             <span><strong>Imprimir / salvar PDF</strong><span class="mi-sub">Ctrl + P</span></span>
@@ -120,6 +114,11 @@
       <strong class="kpi-value" id="kpi-total-usd">$0.00</strong>
       <span class="kpi-foot" id="kpi-taxa-usada">&mdash;</span>
     </div>
+    <div class="kpi kpi-violet">
+      <span class="kpi-label">Equivalente em libra</span>
+      <strong class="kpi-value" id="kpi-total-gbp">&pound;0.00</strong>
+      <span class="kpi-foot" id="kpi-taxa-usada-gbp">&mdash;</span>
+    </div>
     <div class="kpi kpi-amber">
       <span class="kpi-label">Pagamentos</span>
       <strong class="kpi-value" id="kpi-pago">0 de 0</strong>
@@ -134,7 +133,8 @@
   </section>
 
   <div class="chips" aria-label="Par&acirc;metros definidos pela CCO">
-    <span class="chip"><span class="k">Taxa de convers&atilde;o</span><span class="v" id="chip-taxa">&mdash;</span></span>
+    <span class="chip"><span class="k">D&oacute;lar</span><span class="v" id="chip-taxa">&mdash;</span></span>
+    <span class="chip"><span class="k">Libra</span><span class="v" id="chip-taxa-gbp">&mdash;</span></span>
     <span class="chip"><span class="k">Dias &uacute;teis</span><span class="v" id="chip-dias">&mdash;</span></span>
     <span class="chip"><span class="k">Taxa Wise</span><span class="v" id="chip-wise">&mdash;</span></span>
     <span class="chip" style="border-style:dashed;"><span class="k">Definidos pela CCO</span></span>
@@ -142,31 +142,28 @@
 
   <section class="card" id="card-folha">
     <div class="table-scroll">
-      <table class="grid modo-completo" id="tabela-folha">
+      <table class="grid" id="tabela-folha">
         <thead>
           <tr>
-            <th class="col-idx stick" scope="col">#</th>
-            <th class="col-nome stick-2" scope="col">Nome</th>
+            <th class="col-exp stick" scope="col"><span class="sr-only">Detalhes</span></th>
+            <th class="col-idx" scope="col">#</th>
+            <th class="col-nome col-flex" scope="col">Nome</th>
             <th class="num col-money sep-l" scope="col">Sal&aacute;rio base</th>
             <th class="num col-money" scope="col">Comiss&atilde;o</th>
             <th class="num col-money" scope="col">Aluguel / Outros</th>
             <th class="num col-money" scope="col">Bonifica&ccedil;&atilde;o</th>
             <th class="num col-calc sep-l" scope="col">Total R$</th>
             <th class="num col-calc" scope="col">Custo di&aacute;rio</th>
-            <th class="num col-calc" scope="col">Em d&oacute;lar</th>
-            <th class="col-txt cad sep-l" scope="col">Cidade</th>
-            <th class="col-txt cad" scope="col">Cargo</th>
-            <th class="col-data cad" scope="col">Data</th>
-            <th class="col-obs cad" scope="col">OBS</th>
-            <th class="col-wise cad sep-l" scope="col">Link Wise</th>
-            <th class="col-status" scope="col">Status</th>
+            <th class="num col-calc sep-l" scope="col">Em d&oacute;lar</th>
+            <th class="num col-calc" scope="col">Em libra</th>
+            <th class="col-status sep-l" scope="col">Status</th>
             <th class="col-acao" scope="col"><span class="sr-only">A&ccedil;&otilde;es</span></th>
           </tr>
         </thead>
         <tbody id="tbody-folha"></tbody>
         <tfoot>
           <tr>
-            <td colspan="2" class="total-label stick">Total</td>
+            <td colspan="3" class="total-label stick">Total</td>
             <td class="num" id="t-salario">R$ 0,00</td>
             <td class="num" id="t-comissao">R$ 0,00</td>
             <td class="num" id="t-aluguel">R$ 0,00</td>
@@ -174,7 +171,7 @@
             <td class="num" id="t-total">R$ 0,00</td>
             <td class="num" id="t-diario">R$ 0,00</td>
             <td class="num calc-usd" id="t-dolar">$0.00</td>
-            <td class="cad" colspan="5"></td>
+            <td class="num calc-gbp" id="t-libra">&pound;0.00</td>
             <td colspan="2"></td>
           </tr>
         </tfoot>
