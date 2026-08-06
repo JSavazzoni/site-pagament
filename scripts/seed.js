@@ -1,19 +1,5 @@
 'use strict';
-/**
- * Cria o schema e a primeira conta CCO. Idempotente: recusa criar uma 2a
- * conta CCO se ja existir uma.
- *
- * Funciona contra o banco LOCAL (padrao) ou contra o TURSO DE PRODUCAO --
- * basta exportar TURSO_DATABASE_URL e TURSO_AUTH_TOKEN antes de rodar.
- * E assim que se cria a conta CCO do site no Vercel (veja o README).
- *
- * Uso:
- *   node scripts/seed.js
- *   SEED_CCO_USERNAME=cco SEED_CCO_PASSWORD=minhasenha node scripts/seed.js
- *
- * Sem SEED_CCO_PASSWORD, gera uma senha aleatoria forte e imprime UMA
- * UNICA VEZ -- nunca fica gravada em lugar nenhum alem do hash no banco.
- */
+
 const crypto = require('node:crypto');
 const db = require('../server/db.js');
 const auth = require('../server/auth.js');

@@ -28,17 +28,11 @@ function cookieParser(req, res, next) {
   next();
 }
 
-/**
- * Garante o banco pronto antes de qualquer rota de API. Memoizado no db --
- * custo ~zero depois da primeira requisicao da instancia. Se estiver no
- * Vercel sem Turso configurado, cai no errorHandler com um 503 explicativo
- * em vez de um 500 criptico.
- */
+
 function ensureDb(req, res, next) {
   db.init().then(() => next(), next);
 }
 
-/** Sempre rebusca role/sector_id/active frescos do banco -- nunca confia em cache. */
 async function requireAuth(req, res, next) {
   const token = req.cookies && req.cookies[auth.COOKIE_NAME];
   const user = await auth.verifySession(token);
@@ -55,7 +49,6 @@ function requireRole(role) {
   };
 }
 
-/** Recurso de outro setor: 404 (nunca 403) -- nao confirma existencia pra quem nao tem acesso. */
 function notFound(message) {
   return new HttpError(404, message || 'Recurso nao encontrado.');
 }
@@ -72,7 +65,6 @@ function forbidden(message) {
   return new HttpError(403, message || 'Acao nao permitida.');
 }
 
-// eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
@@ -80,8 +72,7 @@ function errorHandler(err, req, res, next) {
   if (err instanceof db.DbNotConfiguredError) {
     return res.status(503).json({ error: err.message });
   }
-  // constraints valem para os dois backends (node:sqlite e libsql/Turso);
-  // os codigos de erro diferem entre eles, a mensagem nao.
+
   const msg = String((err && err.message) || '');
   if (/UNIQUE constraint failed/.test(msg)) {
     return res.status(409).json({ error: 'Ja existe um registro com esses dados.' });

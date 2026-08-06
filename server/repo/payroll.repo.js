@@ -25,7 +25,6 @@ function toPublic(row) {
   };
 }
 
-/** Recalcula total/diario/dolar/fee/totalUsd a partir dos campos armazenados -- nunca confia no que o cliente mandou. */
 function calcRow(item, config) {
   return Calc.calcItem(item, config);
 }
@@ -43,7 +42,6 @@ async function listBySector(sectorId, competencia) {
   return rows.map(toPublic);
 }
 
-/** So aceita codigo conhecido -- o resto vira USD em vez de estourar o CHECK. */
 function moedaValida(m) {
   return Calc.MOEDAS[String(m || '').toUpperCase()] ? String(m).toUpperCase() : 'USD';
 }
@@ -51,7 +49,6 @@ function moedaValida(m) {
 const COLUNAS_INSERT =
   '(sector_id, competencia, nome, salario_base, comissao, aluguel, bonificacao, cidade, cargo, data, obs, wise_link, moeda_pagamento, created_by)';
 
-/** Argumentos do INSERT na ordem de COLUNAS_INSERT. */
 function argsInsert(data) {
   return [
     data.sectorId, data.competencia, data.nome || '',
@@ -62,10 +59,6 @@ function argsInsert(data) {
   ];
 }
 
-/**
- * RETURNING evita o SELECT de volta: antes era INSERT + SELECT (2 viagens de
- * rede ate o Turso); agora e uma so. O mesmo vale para update() e setPago().
- */
 const SQL_INSERT = `INSERT INTO folha_itens ${COLUNAS_INSERT}
    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`;
 
@@ -74,11 +67,6 @@ async function create(data) {
   return rows.length ? toPublic(rows[0]) : null;
 }
 
-/**
- * sectorId/competencia/pago sao imutaveis por aqui -- ver setPago() e rotas.
- * O COALESCE deixa o "so mexe no que veio no patch" acontecer dentro do proprio
- * UPDATE, sem precisar ler a linha antes (eram 3 viagens: SELECT, UPDATE, SELECT).
- */
 async function update(id, patch) {
   const v = (x) => (x != null ? x : null);
   const n = (x) => (x != null ? Calc.parseNum(x) : null);
@@ -121,11 +109,6 @@ async function setPago(id, pago) {
   return rows.length ? toPublic(rows[0]) : null;
 }
 
-/**
- * Marca/desmarca varios lancamentos de uma vez, numa unica viagem de rede.
- * O painel fazia um PATCH por colaborador ao "pagar setor inteiro" -- 12
- * colaboradores eram 12 requisicoes em serie.
- */
 async function setPagoEmLote(ids, pago) {
   if (!ids.length) return [];
   const marcas = ids.map(() => '?').join(',');
@@ -138,7 +121,6 @@ async function setPagoEmLote(ids, pago) {
   return rows.map(toPublic);
 }
 
-/** Copia os itens do mes anterior (ou do mes nao-vazio mais recente antes da competencia) para a competencia atual. */
 async function copyPrevious({ sectorId, competencia, replace, createdBy }) {
   const existing = await db.all(
     'SELECT id FROM folha_itens WHERE sector_id = ? AND competencia = ?',
@@ -167,8 +149,6 @@ async function copyPrevious({ sectorId, competencia, replace, createdBy }) {
   }
   if (!sourceItems.length) return { copied: 0, existing: existing.length };
 
-  // Tudo numa unica viagem de rede e numa unica transacao: se um insert falhar,
-  // nada e gravado -- antes era um DELETE/INSERT por linha, em serie.
   const comandos = [];
   if (existing.length && replace) {
     comandos.push({
@@ -193,7 +173,6 @@ async function copyPrevious({ sectorId, competencia, replace, createdBy }) {
   return { copied: sourceItems.length, existing: 0 };
 }
 
-/** So a leitura -- separada para poder rodar em paralelo com a busca da config. */
 async function summaryRows(competencia) {
   return db.all(
     `SELECT f.*, s.name AS sector_name, s.active AS sector_active
@@ -204,7 +183,6 @@ async function summaryRows(competencia) {
   );
 }
 
-/** Agregado por setor (inclui setores inativos que tenham itens nesta competencia) + total geral. */
 async function summary(competencia, config) {
   return summaryFromRows(competencia, await summaryRows(competencia), config);
 }

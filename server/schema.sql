@@ -1,7 +1,3 @@
--- Schema da folha de pagamento multiusuario.
--- PRAGMA foreign_keys eh por conexao (nao fica gravado no arquivo .db) --
--- server/db.js precisa aplicar de novo toda vez que abre o banco.
-
 CREATE TABLE IF NOT EXISTS sectors (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL UNIQUE,
@@ -39,8 +35,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
--- Dolar e libra tem cada um a sua taxa; taxa_conversao_auto vale para as duas
--- (marcar "seguir a cotacao ao vivo" sincroniza ambas).
 CREATE TABLE IF NOT EXISTS config_mes (
   competencia          TEXT PRIMARY KEY CHECK (competencia GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]'),
   dias_uteis           INTEGER NOT NULL DEFAULT 26 CHECK (dias_uteis BETWEEN 1 AND 31),
@@ -67,7 +61,6 @@ CREATE TABLE IF NOT EXISTS folha_itens (
   data          TEXT NOT NULL DEFAULT '',
   obs           TEXT NOT NULL DEFAULT '',
   wise_link     TEXT NOT NULL DEFAULT '',
-  -- moeda em que a pessoa recebe de fato; o salario continua definido em real
   moeda_pagamento TEXT NOT NULL DEFAULT 'USD' CHECK (moeda_pagamento IN ('BRL','USD','EUR','GBP')),
   pago          INTEGER NOT NULL DEFAULT 0 CHECK (pago IN (0,1)),
   pago_em       TEXT,
@@ -78,8 +71,6 @@ CREATE TABLE IF NOT EXISTS folha_itens (
 CREATE INDEX IF NOT EXISTS idx_folha_sector_comp ON folha_itens(sector_id, competencia);
 CREATE INDEX IF NOT EXISTS idx_folha_comp ON folha_itens(competencia);
 
--- Rate limit de login persistido no banco: em serverless cada requisicao pode
--- cair numa instancia nova, entao contador em memoria nao segura brute-force.
 CREATE TABLE IF NOT EXISTS login_attempts (
   key            TEXT PRIMARY KEY,
   count          INTEGER NOT NULL DEFAULT 1,

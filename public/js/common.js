@@ -1,9 +1,5 @@
 'use strict';
-/**
- * Helpers compartilhados pelas 4 paginas: fetch wrapper com cookie de sessao,
- * redireciona para /login em 401, toast(), $()/$all(), menus suspensos,
- * modal de confirmacao, navegador de mes e menu do usuario.
- */
+
 (function () {
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -13,10 +9,6 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-
-  /* ---------------- icones ----------------
-     SVG de traco, no lugar dos emoji: emoji muda de desenho a cada sistema,
-     nao acompanha a cor do texto e desalinha com a linha de base. */
 
   var TRACOS = {
     chave:    '<path d="M15 7a4 4 0 1 1-3.9 5H8v2H6v2H3v-3l5.1-5.1A4 4 0 0 1 15 7Z"/><circle cx="16.5" cy="7.5" r=".6" fill="currentColor"/>',
@@ -41,20 +33,6 @@
     seta:     '<path d="m9 6 6 6-6 6"/>'
   };
 
-  /**
-   * Devolve o SVG do icone. Herda a cor do texto (currentColor) e escala com o
-   * tamanho da fonte, entao encaixa em qualquer lugar sem ajuste.
-   */
-  function ico(nome, tamanho) {
-    var d = TRACOS[nome];
-    if (!d) return '';
-    var s = tamanho || 16;
-    return '<svg class="ico" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" ' +
-      'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" ' +
-      'stroke-linejoin="round" aria-hidden="true" focusable="false">' + d + '</svg>';
-  }
-
-  /** Troca por SVG todo elemento marcado com data-ico="nome". */
   function pintarIcones(raiz) {
     $all('[data-ico]', raiz).forEach(function (el) {
       if (el.dataset.icoFeito) return;
@@ -139,7 +117,6 @@
     modalStack = modalStack.filter(function (x) { return x !== id; });
   }
 
-  // Esc fecha o modal do topo / os menus abertos; clique no fundo escuro tambem fecha.
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if (modalStack.length) { closeModal(modalStack[modalStack.length - 1]); return; }
@@ -150,10 +127,6 @@
     if (back && back.id) closeModal(back.id);
   });
 
-  /**
-   * Confirmacao com visual do app (o confirm() nativo e feio e trava a aba).
-   * Uso: App.confirmar({ titulo, texto, ok, perigo }).then(function (sim) { ... })
-   */
   function confirmar(opts) {
     var o = opts || {};
     return new Promise(function (resolve) {
@@ -194,8 +167,6 @@
     $all('.menu.open').forEach(function (m) { if (m !== exceto) m.classList.remove('open'); });
   }
 
-  // Delegacao global: qualquer <div class="menu"> com [data-menu-trigger] funciona
-  // sozinho, sem cada pagina precisar religar eventos depois de re-renderizar.
   document.addEventListener('click', function (e) {
     var trigger = e.target.closest('[data-menu-trigger]');
     if (trigger) {
@@ -208,7 +179,6 @@
     }
     var dentro = e.target.closest('.menu-panel');
     if (dentro) {
-      // um item de menu sempre fecha o menu ao ser acionado
       if (e.target.closest('.menu-item')) fecharMenus();
       return;
     }
@@ -233,10 +203,6 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
 
-  /**
-   * Liga o widget <div class="month-nav"> a um callback.
-   * Devolve { set(comp), get() } para a pagina controlar o valor.
-   */
   function montarMonthNav(root, valorInicial, onChange) {
     var el = typeof root === 'string' ? $(root) : root;
     var atual = valorInicial;
@@ -259,9 +225,6 @@
     input.addEventListener('change', function () { mudar(input.value); });
     pintar();
 
-    // Alt + setas navega os meses de qualquer lugar da pagina -- mas nunca com o
-    // foco dentro de um campo: trocar de mes ali dispara o change do campo com o
-    // valor do mes que acabou de sair e sobrescreve a configuracao do outro mes.
     document.addEventListener('keydown', function (e) {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       var alvo = e.target;
@@ -285,7 +248,6 @@
     return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
   }
 
-  /** Preenche avatar/nome/papel e liga trocar-senha + sair, iguais nas 3 paginas. */
   function montarUserMenu(user) {
     var av = $('#avatar');
     if (av) {
@@ -329,7 +291,6 @@
     }
   }
 
-  /** Liga todos os [data-pw-toggle] da pagina (botao de revelar senha). */
   function ligarPwToggles(root) {
     $all('[data-pw-toggle]', root).forEach(function (btn) {
       if (btn.dataset.ligado) return;
@@ -347,7 +308,6 @@
     });
   }
 
-  /** Senha forte legivel, para a CCO nao precisar inventar uma na hora. */
   function gerarSenha(tam) {
     var abc = 'abcdefghijkmnopqrstuvwxyz';
     var ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ';

@@ -12,7 +12,6 @@
   var saveTimers = {};
   var pendingPatches = {};
 
-  // colunas da linha principal (colspan do painel de detalhes)
   var COLUNAS = 13;
 
   /* ============================================================
@@ -120,11 +119,6 @@
       '</tr>';
   }
 
-  /**
-   * Cidade, cargo, data, OBS e o link do Wise saem da grade e vem para ca, em
-   * campos rotulados de tamanho normal: sao dados de cadastro (preenchidos uma
-   * vez e copiados de mes em mes), nao valem espremer a digitacao dos valores.
-   */
   function linhaDetalhe(it, aberta) {
     var d = it.pago ? ' disabled' : '';
     var href = Calc.wiseHref(it.wiseLink);
@@ -190,7 +184,6 @@
       var r = Calc.calcItem(it, state.config);
       escreve(tr, 'total', Calc.brl(r.total));
       escreve(tr, 'diario', Calc.brl(r.diario));
-      // o que o gestor ve: o valor na moeda em que a pessoa recebe, e o custo em real
       var cel = tr.querySelector('[data-c-enviar]');
       if (cel) {
         var val = cel.querySelector('.enviar-val');
@@ -250,7 +243,6 @@
     App.$('#kpi-progress').style.width = (state.itens.length ? (pagos.length / state.itens.length) * 100 : 0) + '%';
   }
 
-  /** "$1.234,56 · €890,00" -- so as moedas que o setor usa. */
   function resumoMoedas(t) {
     var moedas = Calc.moedasEmUso(t);
     if (!moedas.length) return '&mdash;';
@@ -268,11 +260,6 @@
      Edicao
      ============================================================ */
 
-  /**
-   * Debounce por item, mas o patch ACUMULA entre chamadas (nao substitui) --
-   * senao editar 2 campos rapido (ex.: salario e depois comissao dentro dos
-   * mesmos 500ms) cancela o timer do 1o campo e so o ultimo e salvo.
-   */
   function salvarItem(id, campo, valor) {
     var patch = pendingPatches[id] || (pendingPatches[id] = {});
     patch[campo] = valor;
@@ -355,7 +342,6 @@
       });
     });
 
-    // Enter desce uma linha na mesma coluna; na ultima linha, cria a proxima.
     TB.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       var inp = e.target.closest('.cell');

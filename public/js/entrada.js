@@ -1,9 +1,5 @@
 'use strict';
-/**
- * Porta de entrada: manda cada um para a sua tela.
- * Ficava embutido no index.html; virou arquivo para a CSP poder proibir
- * script inline (script-src 'self'), que e o que fecha a porta para XSS.
- */
+
 fetch('/api/auth/me', { credentials: 'include' }).then(function (r) {
   if (!r.ok) { location.replace('/login'); return null; }
   return r.json();

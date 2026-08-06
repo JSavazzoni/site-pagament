@@ -1,18 +1,3 @@
-/* ============================================================
-   shared/calc.js
-   Calculo, parsing e formatacao da folha de pagamento.
-   Modulo puro (sem document/window/localStorage) usado tanto pelo
-   servidor (require) quanto pelo navegador (<script src="/shared/calc.js">).
-
-   Extraido do app.js da versao single-usuario. calcItem/calcTotais
-   antes liam a config por closure sobre um `state` de modulo; aqui
-   recebem `config` explicito por parametro -- essencial num servidor
-   que atende requisicoes concorrentes de setores/competencias
-   diferentes (closure de modulo vazaria estado entre requisicoes).
-   A matematica interna e identica, ja validada contra planilha real:
-   4500 + 500 + 50 @ taxa 5,00, wise 1% -> total 5050, dolar 1010,
-   taxa 10.10, total c/ taxas 1020.10.
-   ============================================================ */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
@@ -37,8 +22,6 @@
   function eur(n) { return nfEUR.format(isFinite(n) ? n : 0); }
   function num(n) { return nfNum.format(isFinite(n) ? n : 0); }
   function rate(n) { return nfRate.format(isFinite(n) ? n : 0); }
-
-  /** Aceita "4500", "4.500,00", "4,500.00", "R$ 4.500" */
   function parseNum(v) {
     if (typeof v === 'number') return isFinite(v) ? v : 0;
     if (v == null) return 0;
@@ -86,8 +69,6 @@
     return y + '-' + String(m).padStart(2, '0');
   }
 
-  /* ---------------- calculo (config explicito, sem closure) ---------------- */
-
   /* ---------------- moedas ---------------- */
 
   var MOEDAS = {
@@ -103,24 +84,15 @@
     return MOEDAS[m] ? m : 'USD';
   }
 
-  /** Formata um valor no padrao da moeda informada. */
   function fmtMoeda(codigo, valor) {
     var m = MOEDAS[codigo] || MOEDAS.USD;
     return m.formata(valor);
   }
 
   /**
-   * O salario e sempre definido em REAL. Cada moeda estrangeira e uma conversao
-   * INDEPENDENTE desse mesmo total, pela sua propria taxa -- nunca uma derivada
-   * da outra por cross rate.
-   *
-   * `moedaPagamento` diz em qual delas a pessoa recebe de fato: e dai que saem
-   * `aEnviar` (o que a CCO manda) e `equivaleBrl` (quanto isso custa em real,
-   * ja com a taxa Wise).
-   *
-   * @param {object} it - { salarioBase, comissao, aluguel, bonificacao, moedaPagamento }
-   * @param {object} config - { diasUteis, taxaWisePct, taxaConversao, taxaConversaoEur, taxaConversaoGbp }
-   */
+   * @param {object} it 
+   * @param {object} config
+  */
   function calcItem(it, config) {
     var c = config || {};
     var total = parseNum(it.salarioBase) + parseNum(it.comissao) + parseNum(it.aluguel) + parseNum(it.bonificacao);
@@ -140,11 +112,9 @@
     var moeda = moedaDe(it);
     var escolhida = moeda === 'USD' ? u : moeda === 'EUR' ? e : moeda === 'GBP' ? g : null;
 
-    // Em real nao ha conversao: a taxa Wise so existe quando se troca de moeda.
     var aEnviarBruto = escolhida ? escolhida.valor : total;
     var feeEscolhida = escolhida ? escolhida.fee : 0;
     var aEnviar = aEnviarBruto + feeEscolhida;
-    // De volta a real pela mesma taxa: total + o que a taxa Wise custa.
     var equivaleBrl = escolhida ? aEnviar * escolhida.taxa : total;
 
     return {
@@ -202,7 +172,6 @@
     return t;
   }
 
-  /** So as moedas que realmente tem alguem, na ordem de exibicao. */
   function moedasEmUso(totais) {
     var pm = (totais && totais.porMoeda) || {};
     return CODIGOS_MOEDA.filter(function (m) { return pm[m] && pm[m].qtd > 0; });
@@ -223,7 +192,6 @@
     return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
 
-  /** Parser CSV simples com suporte a aspas; detecta ; , ou TAB. */
   function parseCSV(texto) {
     texto = String(texto || '').replace(/^\ufeff/, '').replace(/\r\n?/g, '\n');
     var primeira = texto.split('\n')[0] || '';

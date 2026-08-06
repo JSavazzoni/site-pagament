@@ -1,10 +1,4 @@
-/* ============================================================
-   Folha de Pagamento - design system (tema escuro)
-   Compartilhado por login.html, setor.html, painel.html, admin.html
-   ============================================================ */
-
 :root {
-  /* superficies: preto quase puro, com elevacao por camadas */
   --bg:        #08080a;
   --bg-2:      #0c0c0f;
   --surface:   #121216;
@@ -35,7 +29,6 @@
   --amber-dim:  #33280a;
   --amber-line: #5c4413;
 
-  /* libra: violeta, para nunca ser confundida com o verde do dolar */
   --violet:      #a78bfa;
   --violet-dim:  #1e1733;
   --violet-line: #3b2f66;
@@ -84,11 +77,9 @@ p { color: var(--ink-2); }
 }
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* icones SVG: acompanham a cor e o tamanho do texto ao redor */
 .ico { display: block; flex: none; }
 button .ico, a .ico, label .ico { pointer-events: none; }
 
-/* entradas suaves -- o que da vida sem virar espetaculo */
 @keyframes surgir { from { opacity: 0; transform: translateY(6px); } }
 @keyframes surgirCurto { from { opacity: 0; transform: translateY(3px); } }
 .kpis > .kpi { animation: surgir .32s cubic-bezier(.2, .8, .3, 1) backwards; }
@@ -107,7 +98,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .menu.open .menu-item:nth-child(3) { animation-delay: .06s; }
 .menu.open .menu-item:nth-child(4) { animation-delay: .09s; }
 
-/* barra de rolagem escura */
 * { scrollbar-color: var(--line-3) transparent; scrollbar-width: thin; }
 *::-webkit-scrollbar { height: 11px; width: 11px; }
 *::-webkit-scrollbar-track { background: transparent; }
@@ -162,7 +152,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 
 .topbar-user { display: flex; align-items: center; gap: 8px; flex: none; }
 
-/* avatar + menu do usuario */
 .user-btn {
   display: flex; align-items: center; gap: 9px;
   background: transparent; border: 1px solid transparent;
@@ -215,10 +204,8 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .toolbar-inner { max-width: 1720px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .toolbar-spacer { flex: 1; min-width: 0; }
 
-/* quando quebra, as linhas nao grudam umas nas outras */
 .toolbar-inner > * { margin-bottom: 2px; }
 
-/* navegador de mes */
 .month-nav {
   display: inline-flex; align-items: stretch;
   background: var(--surface-2);
@@ -252,7 +239,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .month-nav .month-label span { pointer-events: none; }
 .btn-hoje { flex: none; }
 
-/* busca */
 .search {
   position: relative; flex: 0 1 300px; min-width: 170px;
 }
@@ -279,7 +265,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .search .clear:hover { color: var(--ink); background: var(--surface-4); }
 .search input:placeholder-shown ~ .clear { display: none; }
 
-/* chip de cotacao ao vivo */
 .quote-chip {
   display: inline-flex; align-items: center; gap: 8px; flex: none;
   background: var(--surface-2); border: 1px solid var(--line-2);
@@ -353,7 +338,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .loading .ico-refresh, .is-loading .ico-refresh { animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* estados de carregamento para acoes de pagamento */
 .is-loading { position: relative; pointer-events: none; }
 .is-loading::after {
   content: ''; position: absolute; inset: 0;
@@ -367,7 +351,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
   border-radius: 999px; animation: spin .7s linear infinite;
 }
 
-/* botao Wise compacto ao lado do status de pagamento */
 .btn-wise {
   display: inline-flex; align-items: center; gap: 5px;
   font: inherit; font-size: 11px; font-weight: 650;
@@ -379,7 +362,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .btn-wise:hover { background: var(--surface-4); border-color: var(--line-3); color: var(--ink); }
 .btn-wise .ico { color: var(--accent-hi); }
 
-/* valor secundario de moeda (GBP ao lado de USD) */
 .enviar-alt {
   font-size: 10.5px; color: var(--violet); font-weight: 600;
   font-variant-numeric: tabular-nums; margin-top: 1px;
@@ -416,7 +398,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
   transition: background .13s, color .13s;
 }
 .menu-item:hover { background: var(--surface-4); color: var(--ink); }
-/* fiozinho no lado esquerdo ao passar o mouse: da o sentido de selecao */
 .menu-item::before {
   content: ''; position: absolute; left: 3px; top: 50%;
   width: 2px; height: 0; border-radius: 2px;
@@ -481,7 +462,6 @@ button .ico, a .ico, label .ico { pointer-events: none; }
 .input-num { font-variant-numeric: tabular-nums; }
 select.input { cursor: pointer; }
 
-/* campo com prefixo/sufixo (R$, %, ...) */
 .input-affix {
   display: flex; align-items: center;
   background: var(--surface-2); border: 1px solid var(--line-2);
@@ -499,7 +479,6 @@ select.input { cursor: pointer; }
 .input-affix input:focus { outline: none; }
 .input-affix input:disabled { color: var(--ink-3); cursor: not-allowed; }
 
-/* senha com botao de revelar */
 .pw-wrap { position: relative; }
 .pw-wrap .input { padding-right: 42px; }
 .pw-toggle {
@@ -545,14 +524,12 @@ select.input { cursor: pointer; }
 .kpi-violet::before { background: var(--violet); }
 .kpi-violet .kpi-value { color: var(--violet); }
 
-/* destaque sutil ao passar o mouse: identifica qual KPI esta sendo lida */
 .kpi:hover { border-color: var(--line-2); }
 .kpi:hover::before { width: 3px; }
 
 .delta.up   { color: var(--red); font-weight: 600; }
 .delta.down { color: var(--accent-hi); font-weight: 600; }
 
-/* barra de progresso dentro do KPI */
 .progress { height: 4px; border-radius: 999px; background: var(--surface-4); overflow: hidden; margin-top: 9px; }
 .progress > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-lo), var(--accent)); transition: width .3s ease; }
 
@@ -572,7 +549,6 @@ select.input { cursor: pointer; }
 .badge-red    { background: var(--red-dim); color: var(--red); box-shadow: inset 0 0 0 1px var(--red-line); }
 .badge-neutral{ background: var(--surface-3); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-2); }
 
-/* tiras de parametro somente-leitura (gestor) */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   display: inline-flex; align-items: baseline; gap: 7px;
@@ -604,7 +580,6 @@ select.input { cursor: pointer; }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .card-body { padding: 16px; }
 
-/* card recolhivel (parametros do mes) */
 .collapse { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .collapse-head {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -640,8 +615,6 @@ select.input { cursor: pointer; }
   color: var(--ink-3);
   font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
   text-align: left; padding: 8px 9px;
-  /* o titulo quebra em duas linhas em vez de forcar a coluna a ficar larga --
-     assim nenhuma celula de dado precisa ser espremida por causa do cabecalho */
   white-space: normal; line-height: 1.25; vertical-align: bottom;
   border-bottom: 1px solid var(--line-2);
 }
@@ -660,22 +633,16 @@ select.input { cursor: pointer; }
 .grid tbody tr:last-child td { border-bottom: 0; }
 .grid tbody td.sep-l { box-shadow: inset 1px 0 0 var(--line); }
 
-/* Larguras: tudo tem um minimo proprio e UMA coluna leva a sobra (.col-flex),
-   senao o navegador estica a ultima coluna de texto e trunca as outras. */
 .grid .col-idx   { width: 38px; }
 .grid .col-nome  { min-width: 164px; }
 .grid .col-money { min-width: 106px; }
 .grid .col-calc  { min-width: 112px; }
 .grid .col-txt   { min-width: 106px; }
-/* cargo cabe inteiro: "Coordenadora de Operacoes" e "Engenheira de Software"
-   sao os casos reais mais longos -- medido, nao chutado */
+
 .grid .col-cargo { min-width: 208px; }
 .grid .col-moeda { min-width: 92px; }
 .grid .col-enviar { min-width: 128px; }
 
-/* ---------------- moeda de pagamento ---------------- */
-
-/* cada moeda tem a sua cor, a mesma da tabela ao KPI, para bater de relance */
 .m-BRL { color: var(--ink); }
 .m-USD { color: var(--accent-hi); }
 .m-EUR { color: var(--blue); }
@@ -686,7 +653,6 @@ select.input { cursor: pointer; }
 .kpi-moeda.m-GBP::before { background: var(--violet); }
 .kpi-moeda.m-BRL::before { background: var(--ink-3); }
 
-/* seletor de moeda na linha: parece etiqueta, funciona como select */
 .moeda-sel {
   appearance: none; -webkit-appearance: none;
   font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .03em;
@@ -707,7 +673,6 @@ select.input { cursor: pointer; }
 .moeda-sel option { background: var(--surface-2); color: var(--ink); font-weight: 600; }
 .grid td.moeda { text-align: center; padding: 0 6px; }
 
-/* etiqueta so-leitura (tela do gestor) */
 .moeda-tag {
   display: inline-block;
   font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
@@ -715,7 +680,6 @@ select.input { cursor: pointer; }
   background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
-/* "a enviar" e o numero que importa: destacado, com o real logo abaixo */
 .grid td.enviar { padding: 7px 9px; text-align: right; white-space: nowrap; }
 .enviar-val { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .enviar-brl { font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
@@ -1167,7 +1131,6 @@ tr.det-row.escondida { display: none; }
   .grid tbody td { background: #fff !important; }
   .grid tfoot td { background: var(--surface-3) !important; }
 
-  /* inputs viram texto simples -- sem borda, sem cinza de "desabilitado" */
   .cell {
     border: 0 !important; background: transparent !important;
     color: var(--ink) !important; -webkit-text-fill-color: var(--ink);
@@ -1175,7 +1138,6 @@ tr.det-row.escondida { display: none; }
   }
   .cell::-webkit-calendar-picker-indicator { display: none; }
 
-  /* botao de marcar pago vira so um rotulo, sem cara de botao clicavel */
   .pago-toggle { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--ink) !important; }
 
   tr { break-inside: avoid; }

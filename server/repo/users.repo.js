@@ -59,7 +59,7 @@ async function update(id, patch) {
     ]
   );
   if (nextActive === 0 && current.active === 1) {
-    await auth.revokeAllSessionsForUser(id); // desativar derruba sessoes abertas na hora
+    await auth.revokeAllSessionsForUser(id); 
   }
   return getById(id);
 }
