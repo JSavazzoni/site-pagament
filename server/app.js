@@ -95,10 +95,27 @@ app.use('/api/payroll', payrollRoutes);
 // /shared NAO esta em public/, entao passa pela funcao e precisa do
 // Cache-Control aqui -- o do vercel.json so alcanca o que a borda serve.
 const CACHE_ASSET = 'public, max-age=60, stale-while-revalidate=86400';
+
+/**
+ * Endereco sem ".html": /painel em vez de /painel.html.
+ *
+ * Este redirecionamento vem ANTES do express.static -- senao o static entrega
+ * painel.html com 200 e o ".html" continua na barra de endereco. Quem tiver o
+ * link antigo salvo cai aqui e e levado para o novo, sem quebrar.
+ * Em producao o cleanUrls do Vercel faz o mesmo ja na borda.
+ */
+app.get(/^\/(.+)\.html$/i, (req, res) => {
+  const busca = req.originalUrl.slice(req.path.length); // preserva ?a=b#c
+  res.redirect(308, '/' + req.params[0] + busca);
+});
+
 app.use('/shared', express.static(path.join(__dirname, '..', 'shared'), {
   setHeaders: (res) => res.setHeader('Cache-Control', CACHE_ASSET)
 }));
+
+/** `extensions: ['html']` faz /painel servir painel.html. */
 app.use(express.static(path.join(__dirname, '..', 'public'), {
+  extensions: ['html'],
   setHeaders: (res, arquivo) => {
     if (!/\.html$/i.test(arquivo)) res.setHeader('Cache-Control', CACHE_ASSET);
   }

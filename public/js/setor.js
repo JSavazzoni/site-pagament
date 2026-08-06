@@ -23,7 +23,7 @@
     TB = App.$('#tbody-folha');
 
     App.get('/api/auth/me').then(function (data) {
-      if (data.user.role !== 'gestor') { location.replace('/painel.html'); return; }
+      if (data.user.role !== 'gestor') { location.replace('/painel'); return; }
       state.user = data.user;
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
@@ -42,7 +42,7 @@
       bindEventos();
       atualizarBotaoHoje();
       carregarTudo();
-    }).catch(function () { location.replace('/login.html'); });
+    }).catch(function () { location.replace('/login'); });
   }
 
   function atualizarBotaoHoje() {

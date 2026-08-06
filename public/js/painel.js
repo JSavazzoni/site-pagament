@@ -26,7 +26,7 @@
 
   function init() {
     App.get('/api/auth/me').then(function (data) {
-      if (data.user.role !== 'cco') { location.replace('/setor.html'); return; }
+      if (data.user.role !== 'cco') { location.replace('/setor'); return; }
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
       App.pintarIcones();
@@ -43,7 +43,7 @@
       atualizarBotaoHoje();
       carregarTudo();
       setInterval(carregarQuote, 5 * 60 * 1000);
-    }).catch(function () { location.replace('/login.html'); });
+    }).catch(function () { location.replace('/login'); });
   }
 
   function atualizarBotaoHoje() {
@@ -869,7 +869,7 @@
       App.$('#btn-expandir').textContent = algumFechado ? 'Recolher tudo' : 'Expandir tudo';
     });
 
-    App.$('#btn-ir-admin').addEventListener('click', function () { location.href = '/admin.html'; });
+    App.$('#btn-ir-admin').addEventListener('click', function () { location.href = '/admin'; });
 
     // "/" foca a busca
     document.addEventListener('keydown', function (e) {

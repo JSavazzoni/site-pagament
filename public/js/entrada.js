@@ -5,9 +5,9 @@
  * script inline (script-src 'self'), que e o que fecha a porta para XSS.
  */
 fetch('/api/auth/me', { credentials: 'include' }).then(function (r) {
-  if (!r.ok) { location.replace('/login.html'); return null; }
+  if (!r.ok) { location.replace('/login'); return null; }
   return r.json();
 }).then(function (data) {
   if (!data) return;
-  location.replace(data.user.role === 'cco' ? '/painel.html' : '/setor.html');
-}).catch(function () { location.replace('/login.html'); });
+  location.replace(data.user.role === 'cco' ? '/painel' : '/setor');
+}).catch(function () { location.replace('/login'); });

@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Helpers compartilhados pelas 4 paginas: fetch wrapper com cookie de sessao,
- * redireciona para /login.html em 401, toast(), $()/$all(), menus suspensos,
+ * redireciona para /login em 401, toast(), $()/$all(), menus suspensos,
  * modal de confirmacao, navegador de mes e menu do usuario.
  */
 (function () {
@@ -90,7 +90,7 @@
     }
     return fetch(path, opts).then(function (r) {
       if (r.status === 401 && path.indexOf('/api/auth/login') === -1 && !isLoginPage()) {
-        location.href = '/login.html';
+        location.href = '/login';
         throw new Error('Sess\u00e3o expirada.');
       }
       return r.text().then(function (text) {
@@ -303,8 +303,8 @@
     if (sair) {
       sair.addEventListener('click', function () {
         api('POST', '/api/auth/logout')
-          .then(function () { location.href = '/login.html'; })
-          .catch(function () { location.href = '/login.html'; });
+          .then(function () { location.href = '/login'; })
+          .catch(function () { location.href = '/login'; });
       });
     }
 

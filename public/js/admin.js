@@ -14,14 +14,14 @@
 
   function init() {
     App.get('/api/auth/me').then(function (data) {
-      if (data.user.role !== 'cco') { location.replace('/setor.html'); return; }
+      if (data.user.role !== 'cco') { location.replace('/setor'); return; }
       state.eu = data.user;
       App.montarUserMenu(data.user);
       App.ligarPwToggles();
       App.pintarIcones();
       bindEventos();
       carregarTudo();
-    }).catch(function () { location.replace('/login.html'); });
+    }).catch(function () { location.replace('/login'); });
   }
 
   function carregarTudo() {

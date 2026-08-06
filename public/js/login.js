@@ -11,7 +11,7 @@
 
   // ja logado? pula direto pro dashboard certo
   App.get('/api/auth/me').then(function (data) {
-    location.replace(data.user.role === 'cco' ? '/painel.html' : '/setor.html');
+    location.replace(data.user.role === 'cco' ? '/painel' : '/setor');
   }).catch(function () { /* sem sessao -- fica na tela de login */ });
 
   // Caps Lock ligado e a causa mais comum de "minha senha nao funciona".
@@ -33,7 +33,7 @@
       username: App.$('#username').value.trim(),
       password: senha.value
     }).then(function (data) {
-      location.href = data.user.role === 'cco' ? '/painel.html' : '/setor.html';
+      location.href = data.user.role === 'cco' ? '/painel' : '/setor';
     }).catch(function (e2) {
       err.textContent = e2.message || 'N\u00e3o foi poss\u00edvel entrar.';
       btn.disabled = false;
