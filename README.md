@@ -46,16 +46,16 @@ npm run reset-password -- <username> [nova-senha]
 ## Papéis
 
 - **Gestor** — entra em `/setor.html`. Só vê e edita os colaboradores do próprio
-  setor: nome, salário base, comissão, aluguel/outros, bonificação, cidade, cargo,
-  data, OBS, link Wise. Total, custo diário e conversão para dólar são calculados
-  automaticamente. A taxa de conversão, dias úteis e taxa Wise são definidos pela
-  CCO (o gestor só visualiza). Um lançamento marcado como **pago** trava para
-  edição/remoção pelo gestor.
+  setor. A grade traz nome, a composição do salário e os totais já convertidos;
+  cidade, cargo, data, OBS e link Wise ficam no painel que abre ao clicar na
+  setinha da linha. A taxa do dólar, a da libra, os dias úteis e a taxa Wise são
+  definidos pela CCO (o gestor só visualiza). Um lançamento marcado como **pago**
+  trava para edição/remoção pelo gestor.
 - **CCO** — entra em `/painel.html`. Vê todos os setores agrupados (com subtotal
-  cada um) e o total geral em R$ e US$, controla a taxa de conversão do mês
-  (manual ou sincronizada com a cotação ao vivo), marca lançamentos como pagos,
-  exporta CSV geral ou lista de pagamento Wise. Em `/admin.html` cria/renomeia
-  setores e cria/desativa contas de gestor.
+  cada um) e o total geral em R$, US$ e £, controla as taxas do mês (manuais ou
+  sincronizadas com a cotação ao vivo) e marca lançamentos como pagos — um a um
+  ou o setor inteiro de uma vez. Em `/admin.html` cria/renomeia setores e
+  cria/desativa contas de gestor.
 
 Cada gestor pertence a exatamente um setor. Contas CCO são um papel, não uma
 única conta fixa — dá para ter mais de uma.
@@ -64,12 +64,18 @@ Cada gestor pertence a exatamente um setor. Contas CCO são um papel, não uma
 
 - **Total** = salário base + comissão + aluguel/outros + bonificação
 - **Custo diário** = total ÷ dias úteis do mês
-- **Dólar** = total ÷ taxa de conversão
-- **Taxa Wise** = dólar × percentual configurado
-- **Total c/ taxas** = dólar + taxa Wise
+- **Dólar** = total ÷ taxa do dólar do mês
+- **Libra** = total ÷ taxa da libra do mês
+- **Taxa Wise** = valor convertido × percentual configurado (vale para as duas moedas)
+- **Total c/ taxas** = valor convertido + taxa Wise
 
-A cotação ao vivo vem da [AwesomeAPI](https://economia.awesomeapi.com.br), com
-fallback para [exchangerate-api](https://open.er-api.com) se a primeira falhar.
+Dólar e libra são conversões **independentes** do mesmo total em real: cada uma
+usa a sua própria taxa, nenhuma é derivada da outra por cross rate.
+
+A cotação ao vivo (USD-BRL e GBP-BRL) vem da
+[AwesomeAPI](https://economia.awesomeapi.com.br), com fallback para
+[exchangerate-api](https://open.er-api.com) se a primeira falhar. Marcar
+"seguir a cotação ao vivo" sincroniza as duas moedas.
 
 ## Onde ficam os dados
 
