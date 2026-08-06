@@ -513,12 +513,53 @@ p { color: var(--ink-2); }
 
 @media print {
   @page { size: A4 landscape; margin: 10mm; }
-  body { background: #fff; color: #000; font-size: 10.5px; }
-  .topbar, .card-actions, .btn, .panel, .foot, .toast, .col-acao, .acao, .form-inline { display: none !important; }
+
+  /* Redefine os tokens de cor na raiz -- todo componente que usa var(--surface) etc.
+     (kpi, card, sector-block, badges...) vira claro automaticamente, sem precisar
+     sobrescrever regra por regra. */
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f3f4f6;
+    --surface-3: #e5e7eb;
+    --line: #d1d5db;
+    --line-2: #9ca3af;
+    --ink: #000000;
+    --ink-2: #1f2937;
+    --ink-3: #4b5563;
+    --ink-4: #6b7280;
+    --accent-dim: #d1fae5;
+    --accent-line: #10b981;
+    --accent-hi: #047857;
+    --blue-dim: #dbeafe;
+    --blue: #1d4ed8;
+    --amber-dim: #fef3c7;
+    --amber: #92400e;
+    --red-dim: #fee2e2;
+    --red: #b91c1c;
+    --red-line: #fca5a5;
+  }
+
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  body { font-size: 10.5px; }
+  .topbar, .card-actions, .btn, .panel, .foot, .toast, .col-acao, .acao, .form-inline,
+  .wise-link, .modal-backdrop { display: none !important; }
+
   .wrap { padding: 8px 0; gap: 10px; max-width: none; }
-  .card, .kpi { border-color: #999; break-inside: avoid; }
-  .grid { min-width: 0 !important; font-size: 9.5px; color: #000; }
-  .grid thead th { background: #e5e5e5 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .grid tbody td, .grid tfoot td { background: #fff !important; color: #000 !important; }
+  .card, .kpi, .sector-block { border-color: var(--line-2); box-shadow: none; break-inside: avoid; }
+
+  .grid { min-width: 0 !important; font-size: 9.5px; }
+  .grid thead th { background: var(--surface-3) !important; }
+  .grid tbody tr:nth-child(even) td { background: var(--surface-2) !important; }
+  .grid tbody tr.is-pago td { background: var(--accent-dim) !important; }
+
+  /* inputs viram texto simples -- sem borda, sem cinza de "desabilitado" */
+  .cell { border: 0 !important; background: transparent !important; color: var(--ink) !important; -webkit-text-fill-color: var(--ink); opacity: 1 !important; }
+  .cell::-webkit-calendar-picker-indicator { display: none; }
+
+  /* botao de marcar pago vira so um rotulo, sem cara de botao clicavel */
+  .pago-toggle { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--ink) !important; }
+
   tr { break-inside: avoid; }
 }

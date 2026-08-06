@@ -3,6 +3,7 @@
   var Calc = window.Calc;
   var state = { competencia: '', config: null, summary: null, quote: null, openSectors: {} };
   var saveTimers = {};
+  var pendingPatches = {};
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -35,7 +36,11 @@
       state.summary = results[1];
       renderConfigForm();
       renderSetores();
-      renderKpis();
+      // renderSetores() so preenche os totais de cabecalho de cada setor (que ja vem
+      // prontos do servidor); as celulas calculadas de CADA LINHA ficam com o placeholder
+      // do template ate essa chamada preencher de verdade -- sem ela, a tela so mostraria
+      // os numeros certos depois que alguem editasse algum campo.
+      recalcTudoLocal();
     }).catch(function (e) { App.toast(e.message, 'err'); });
   }
 
@@ -276,9 +281,13 @@
 
   /* ---------------- edicao ---------------- */
 
-  function salvarItem(id, patch) {
+  /** Patch acumula entre chamadas (nao substitui) -- ver comentario equivalente em setor.js. */
+  function salvarItem(id, fieldPatch) {
+    pendingPatches[id] = Object.assign(pendingPatches[id] || {}, fieldPatch);
     clearTimeout(saveTimers[id]);
     saveTimers[id] = setTimeout(function () {
+      var patch = pendingPatches[id];
+      delete pendingPatches[id];
       App.patch('/api/payroll/' + id, patch).catch(function (e) { App.toast(e.message, 'err'); });
     }, 500);
   }

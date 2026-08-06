@@ -4,6 +4,7 @@
   var state = { competencia: '', config: null, sector: null, itens: [], user: null };
   var TB = null;
   var saveTimers = {};
+  var pendingPatches = {};
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -134,9 +135,17 @@
 
   /* ---------------- edicao ---------------- */
 
-  function salvarItem(id, patch) {
+  /**
+   * Debounce por item, mas o patch ACUMULA entre chamadas (nao substitui) --
+   * senao editar 2 campos rapido (ex.: salario e depois comissao dentro dos
+   * mesmos 500ms) cancela o timer do 1o campo e so o ultimo e salvo.
+   */
+  function salvarItem(id, fieldPatch) {
+    pendingPatches[id] = Object.assign(pendingPatches[id] || {}, fieldPatch);
     clearTimeout(saveTimers[id]);
     saveTimers[id] = setTimeout(function () {
+      var patch = pendingPatches[id];
+      delete pendingPatches[id];
       App.patch('/api/payroll/' + id, patch).then(function (updated) {
         var idx = state.itens.findIndex(function (it) { return it.id === id; });
         if (idx > -1) state.itens[idx] = updated;
